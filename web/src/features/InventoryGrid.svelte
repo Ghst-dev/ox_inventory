@@ -63,7 +63,7 @@
   <!-- isBusy blocks interaction while a move is in flight, so a second drag cannot race
        the first. The store also refuses concurrent operations outright; this is the
        visible half of that. -->
-  <div class="grid" style:pointer-events={inv.isBusy ? 'none' : 'auto'}>
+  <div class="grid slot-grid" style:pointer-events={inv.isBusy ? 'none' : 'auto'}>
     {#each visible as item (item.slot)}
       <InventorySlot
         {item}
@@ -83,8 +83,10 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: calc(var(--slot-size) * 5 + 6px * 4 + 24px);
-    max-height: 78vh;
+    /* Five columns, four gaps, the panel's own padding, and room for the scrollbar. */
+    width: calc(
+      var(--slot-size) * var(--grid-cols) + var(--slot-gap) * (var(--grid-cols) - 1) + 34px
+    );
     padding: 12px;
     background: var(--surface-panel);
     border: 1px solid var(--color-border);
@@ -115,10 +117,13 @@
     color: var(--color-dim);
   }
 
+  /* Height comes from .slot-grid in app.css: a fixed five rows, so both panes match
+     whatever they hold. grid-auto-rows keeps a partly-filled last row square. */
   .grid {
     display: grid;
-    grid-template-columns: repeat(5, var(--slot-size));
-    gap: 6px;
+    grid-template-columns: repeat(var(--grid-cols), var(--slot-size));
+    grid-auto-rows: var(--slot-size);
+    gap: var(--slot-gap);
     overflow-y: auto;
     padding-right: 4px;
   }

@@ -58,7 +58,7 @@
 <div class="stack">
   {#each queue as entry (entry.id)}
     <div
-      class="notification"
+      class="notification item-art"
       style:background-image={`url(${getItemUrl(entry.item)})`}
       transition:fly={{ x: 24, duration: 200 }}
       animate:flip={{ duration: 200 }}

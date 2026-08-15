@@ -46,7 +46,7 @@
   <div class="hotbar" transition:fly={{ y: 20, duration: 180 }}>
     {#each slots as item (item.slot)}
       <div
-        class="slot"
+        class="slot item-art"
         class:filled={isSlotWithItem(item)}
         style:background-image={isSlotWithItem(item)
           ? `url(${getItemUrl(item as SlotWithItem)})`

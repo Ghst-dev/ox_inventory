@@ -18,7 +18,7 @@
 </script>
 
 {#if drag.source}
-  <div class="preview" bind:this={el} style:background-image={drag.source.image}></div>
+  <div class="preview item-art" bind:this={el} style:background-image={drag.source.image}></div>
 {/if}
 
 <style>
@@ -41,5 +41,11 @@
     /* Must not be hit-testable: elementFromPoint runs on every move and would otherwise
        find the preview sitting under the cursor instead of the slot beneath it. */
     pointer-events: none;
+
+    /* Promoted to its own layer. The transform is rewritten on every pointermove, and
+       without these the compositor repaints the element instead of just moving it,
+       which is visible as the preview lagging the cursor across a busy grid. */
+    will-change: transform;
+    backface-visibility: hidden;
   }
 </style>

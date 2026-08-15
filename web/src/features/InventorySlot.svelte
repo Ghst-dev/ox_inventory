@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { draggable, droppable } from '../lib/dnd.svelte';
+  import { drag, draggable, droppable } from '../lib/dnd.svelte';
   import { closeTooltip, openContextMenu, openTooltip } from '../lib/ui.svelte';
   import { inv } from '../lib/inventory.svelte';
   import { onBuy, onCraft, onDrop, onUse } from '../lib/actions';
@@ -91,6 +91,12 @@
   function onmouseenter(event: MouseEvent) {
     if (!isSlotWithItem(item)) return;
 
+    // Never while dragging. Crossing the grid with an item held would otherwise arm a
+    // tooltip on every slot passed over, and one would fire the moment you paused.
+    // Upstream got this with `body.inv-dragging .item-slot-wrapper { pointer-events:
+    // none }`, which works but also disables the hover styling it did not mean to.
+    if (drag.source) return;
+
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     hoverTimer = setTimeout(() => openTooltip(item as SlotWithItem, inventoryType, rect), TOOLTIP_DELAY_MS);
   }
@@ -142,7 +148,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="slot"
+  class="slot item-art"
   class:filled
   class:unavailable={!available}
   class:hotslot={isHotslot}
@@ -278,10 +284,15 @@
     white-space: nowrap;
   }
 
+  /* The price sits directly over the item art, so it needs its own footing — upstream
+     used a hard text-shadow for the same reason. A tinted strip reads more cleanly at
+     this size than a shadow does. */
   .price {
     padding: 2px 5px;
+    background: color-mix(in srgb, var(--color-bg) 62%, transparent);
     text-align: right;
     color: var(--color-danger-text);
+    font-weight: var(--font-weight-medium);
   }
 
   .price.cash {

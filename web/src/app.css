@@ -41,12 +41,51 @@
 }
 
 /*
- * Resource-local, not a Ghostbase token: nothing else on the server has a concept of a
- * slot. Kept as a variable because the grid width, the drag preview and the slot itself
- * all have to agree on it, and they live in three different components.
+ * Resource-local, not Ghostbase tokens: nothing else on the server has a concept of a
+ * slot. Kept as variables because the grid, the drag preview, the hotbar and the
+ * notifications all have to agree on them, and they live in five different components.
+ *
+ * Sized in vh, as upstream did. A FiveM client can be running anything from 720p to
+ * 4K, and a slot fixed in px is either a postage stamp on a large display or overflows
+ * a small one. The clamp keeps it sane at both extremes — pure vh gets silly on an
+ * ultrawide.
  */
 :root {
-  --slot-size: 88px;
+  --slot-size: clamp(68px, 9.5vh, 112px);
+  --slot-gap: 6px;
+  --grid-cols: 5;
+  --grid-rows: 5;
+}
+
+/*
+ * The grid is a fixed five rows rather than max-height, so both panes are the same
+ * height whatever they contain. A stash with four items next to a full player inventory
+ * otherwise gives you two panels of wildly different sizes.
+ */
+.slot-grid {
+  height: calc(var(--grid-rows) * var(--slot-size) + (var(--grid-rows) - 1) * var(--slot-gap));
+}
+
+/*
+ * A 10px scrollbar (the global one from base.css) eats enough width to shift the five
+ * columns. Scoped narrower here rather than hidden entirely — upstream removed
+ * scrollbars altogether, which leaves no indication that a 5000-slot shop scrolls.
+ */
+.slot-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+/* Item art is small PNGs drawn at a size they were not authored for. Chromium's default
+   smoothing turns them into mush; this is the one hint that keeps them crisp, and CEF is
+   Chromium so it is reliable here. */
+.item-art {
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* Press affordance, carried over from upstream's `button:active`. Softened from a 3px
+   shove to a 1px one — at 3px the whole control column visibly jumps. */
+button:active {
+  transform: translateY(1px);
 }
 
 /*
