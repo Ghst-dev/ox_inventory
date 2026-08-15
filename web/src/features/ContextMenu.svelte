@@ -201,9 +201,10 @@
     white-space: nowrap;
   }
 
+  /* Neutral lift rather than a hue wash — the shared hover convention, see tokens.css. */
   .entry:hover,
   .entry.active {
-    background: var(--primary-glow);
+    background: var(--color-surface-2);
     color: var(--color-white);
   }
 

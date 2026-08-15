@@ -138,12 +138,23 @@
    *
    * discards whatever opaque background the element had and leaves it 92% transparent,
    * which in a game overlay means the scene shows through the one element you are
-   * pointing at. Composite instead:
+   * pointing at.
    *
-   *     background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-panel));
+   * HOVER CONVENTION. Do not reach for a tinted fill as the fix, either. A hovered row
+   * keeps a NEUTRAL surface one step lighter and carries the accent on its border and
+   * text:
    *
-   * Assigning the raw token is only correct where the element has no background of its
-   * own and is already sitting on a panel — a menu row, a calendar range.
+   *     background: var(--color-surface-2);           the row's surface, one step up
+   *     border-color: var(--primary-glow-border);     accent on the edge
+   *     color: var(--color-white);
+   *
+   * A hue in the fill makes the hovered element read as a different material from its
+   * neighbours rather than the same one highlighted. Every hover in the system follows
+   * the neutral form; four did not, and looked wrong next to the rest.
+   *
+   * --primary-glow-border and --action-glow are fine as borders and shadows, which is
+   * what they are for. The raw fill token is only correct on an element with no
+   * background of its own that is already sitting on a panel — a calendar range.
    */
   --primary-glow: rgba(34, 211, 238, 0.08);
   --primary-glow-border: rgba(34, 211, 238, 0.25);
