@@ -57,21 +57,20 @@
   --grid-rows: 5;
 
   /*
-   * Two numbers, deliberately different.
+   * How much width the grid's scrollbar actually takes. Overwritten at startup by
+   * lib/scrollbar.ts, which measures it rather than assuming — this value is only the
+   * fallback for the moment before that runs.
    *
-   * --grid-scrollbar is how wide the scrollbar is *drawn*. --grid-gutter is how much
-   * width the pane *reserves* for it, and it is generous on purpose: how much a
-   * scrolling container actually takes depends on whether the browser honours a styled
-   * ::-webkit-scrollbar width when reserving the gutter, and it does not always. Sizing
-   * the pane to exactly --grid-scrollbar is an exact fit that fails on any client that
-   * reserves a classic scrollbar instead — the fifth column gets clipped and the grid
-   * scrolls sideways.
-   *
-   * The slack is dead space at the right of the grid. It is invisible; a clipped column
-   * is not.
+   * Guessing it does not work in either direction. Guess low and the fifth column is
+   * clipped; guess high and the right-hand side carries dead space the left does not,
+   * which is immediately visible as a lopsided panel.
    */
   --grid-scrollbar: 6px;
-  --grid-gutter: 16px;
+
+  /* The panel's padding, uniform on all four sides. The grid reclaims the scrollbar's
+     width out of the right-hand one with a negative margin, so the columns stay
+     symmetric within it — see InventoryGrid. */
+  --pane-pad: 12px;
 
   /*
    * How far to push the inventory aside for the dev drawer. Always 0 in game — the

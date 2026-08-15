@@ -2,7 +2,12 @@ import { mount } from 'svelte';
 import App from './App.svelte';
 import { debugData, isEnvBrowser } from './lib/nui';
 import { nuiMocks } from './lib/mocks';
+import { publishScrollbarWidth } from './lib/scrollbar';
 import './app.css';
+
+// Before mount: the pane width and the grid's negative margin both depend on this, and
+// measuring it after the first pane renders would show a frame of the wrong layout.
+publishScrollbarWidth();
 
 const app = mount(App, { target: document.getElementById('root')! });
 

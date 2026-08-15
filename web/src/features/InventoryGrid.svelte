@@ -85,15 +85,16 @@
     gap: 8px;
     /*
      * Everything the pane has to fit, spelled out. Preflight makes this border-box, so
-     * the width covers the panel's own 12px padding and 1px border as well as the
-     * columns, the gaps and the scrollbar gutter. Being two pixels short here is enough
-     * to put a horizontal scrollbar under the grid, which is how this was found.
+     * the width covers the panel's own padding and its 1px border as well as the
+     * columns, the gaps and the scrollbar. Being a couple of pixels short is enough to
+     * put a horizontal scrollbar under the grid; being generous is enough to make the
+     * panel visibly lopsided. Both happened, hence the measured --grid-scrollbar.
      */
     width: calc(
       var(--slot-size) * var(--grid-cols) + var(--slot-gap) * (var(--grid-cols) - 1) +
-        var(--grid-gutter) + 26px
+        var(--pane-pad) * 2 + 2px
     );
-    padding: 12px;
+    padding: var(--pane-pad);
     background: var(--surface-panel);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -131,10 +132,21 @@
     grid-auto-rows: var(--slot-size);
     gap: var(--slot-gap);
 
+    /*
+     * Grow rightwards into the panel's right padding by exactly the scrollbar's width,
+     * so the scrollbar is drawn *in* that padding rather than beside it.
+     *
+     * Without this the gap from the last column to the panel edge is the padding plus
+     * the scrollbar, while the gap on the left is the padding alone — a visibly
+     * lopsided panel, and worse the wider the client's scrollbar is. With it the
+     * columns sit symmetrically, and --grid-scrollbar drops out of the pane's width sum
+     * entirely, so an unexpected scrollbar width can no longer clip a column either.
+     */
+    margin-right: calc(-1 * var(--grid-scrollbar));
+
     /* The columns are a fixed width and there are always exactly --grid-cols of them,
        so there is no circumstance in which this should scroll sideways. Saying so
-       outright is what actually guarantees no horizontal scrollbar; the width
-       arithmetic above only keeps that from clipping anything. */
+       outright is what actually guarantees no horizontal scrollbar. */
     overflow-x: hidden;
 
     /* Always `scroll`, never `auto`: a six-slot crafting bench and a forty-slot
