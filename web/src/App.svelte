@@ -6,6 +6,8 @@
   import { setupInventory } from './lib/inventory.svelte';
   import DragPreview from './features/DragPreview.svelte';
   import Inventory from './features/Inventory.svelte';
+  import InventoryHotbar from './features/InventoryHotbar.svelte';
+  import ItemNotifications from './features/ItemNotifications.svelte';
   import type { Inventory as InventoryType } from './typings';
 
   /**
@@ -36,6 +38,11 @@
 </script>
 
 <Inventory />
+
+<!-- Both of these appear while the inventory is closed — the hotbar on a keypress, the
+     notifications whenever an item changes hands — so they sit outside it. -->
+<InventoryHotbar />
+<ItemNotifications />
 
 <!-- The preview follows the cursor across the whole app, so it lives above whatever is
      being dragged rather than inside any one pane. -->

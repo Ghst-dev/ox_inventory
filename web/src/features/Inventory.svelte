@@ -11,8 +11,12 @@
     type ItemsPayload,
     type RefreshPayload,
   } from '../lib/inventory.svelte';
+  import { closeContextMenu, closeTooltip } from '../lib/ui.svelte';
   import type { Inventory } from '../typings';
+  import ContextMenu from './ContextMenu.svelte';
+  import InventoryControl from './InventoryControl.svelte';
   import InventoryGrid from './InventoryGrid.svelte';
+  import Tooltip from './Tooltip.svelte';
 
   /**
    * The two panes and the messages that drive them.
@@ -25,11 +29,18 @@
 
   const offVisible = onNuiEvent<boolean>('setInventoryVisible', (state) => (visible = state));
 
-  const offClose = onNuiEvent('closeInventory', () => {
-    visible = false;
+  /** Everything that has to stop when the inventory goes away. */
+  function dismissAll() {
     // A drag surviving the inventory closing would drop into a pane that is no longer
     // on screen. React reached for manager.dispatch({type:'dnd-core/END_DRAG'}) here.
     endDrag();
+    closeTooltip();
+    closeContextMenu();
+  }
+
+  const offClose = onNuiEvent('closeInventory', () => {
+    visible = false;
+    dismissAll();
   });
 
   const offSetup = onNuiEvent<{ leftInventory?: Inventory; rightInventory?: Inventory }>(
@@ -85,7 +96,7 @@
     if (event.code !== 'Escape') return;
 
     visible = false;
-    endDrag();
+    dismissAll();
     fetchNui('exit');
   }
 
@@ -109,8 +120,14 @@
 {#if visible}
   <div class="wrapper" transition:fade={{ duration: 150 }}>
     <InventoryGrid inventory={inv.leftInventory} />
+    <InventoryControl />
     <InventoryGrid inventory={inv.rightInventory} />
   </div>
+
+  <!-- Both are fixed-position and viewport-clamped, so they sit outside the wrapper
+       rather than inside a pane that would clip them. -->
+  <Tooltip />
+  <ContextMenu />
 {/if}
 
 <style>

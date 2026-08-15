@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { draggable, droppable } from '../lib/dnd.svelte';
+  import { closeTooltip, openContextMenu, openTooltip } from '../lib/ui.svelte';
   import { inv } from '../lib/inventory.svelte';
   import { onBuy, onCraft, onDrop, onUse } from '../lib/actions';
   import { canCraftItem, canPurchaseItem, getItemUrl, isSlotWithItem } from '../lib/helpers';
@@ -44,8 +46,11 @@
     item.metadata?.label ? item.metadata.label : (itemDefs[item.name!]?.label ?? item.name),
   );
 
-  // Slots 1-5 of the player's inventory are the hotbar, and are numbered on the tile.
-  const isHotbarSlot = $derived(inventoryType === InventoryType.PLAYER && item.slot <= 5);
+  // Slots 1-5 of the player's inventory are reachable by number key, and are numbered on
+  // the tile. Named "hotslot" rather than "hotbar" so it is never confused with the
+  // hotbar component itself — Svelte's scoping keeps the two rules apart, but the name
+  // collision is a reading trap.
+  const isHotslot = $derived(inventoryType === InventoryType.PLAYER && item.slot <= 5);
 
   const source = (): DragSource | null => {
     // A shop slot is draggable even with a zero count so the purchase can be refused
@@ -75,7 +80,41 @@
     inventoryType !== InventoryType.SHOP &&
     inventoryType !== InventoryType.CRAFTING;
 
+  /**
+   * The tooltip opens on a delay so that sweeping the cursor across the grid does not
+   * flash one per slot. Anchored to the slot's rect rather than the cursor — see the
+   * note in ui.svelte.ts.
+   */
+  const TOOLTIP_DELAY_MS = 500;
+  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function onmouseenter(event: MouseEvent) {
+    if (!isSlotWithItem(item)) return;
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    hoverTimer = setTimeout(() => openTooltip(item as SlotWithItem, inventoryType, rect), TOOLTIP_DELAY_MS);
+  }
+
+  function dismissTooltip() {
+    clearTimeout(hoverTimer);
+    closeTooltip();
+  }
+
+  onDestroy(() => clearTimeout(hoverTimer));
+
+  function oncontextmenu(event: MouseEvent) {
+    event.preventDefault();
+
+    // Only the player's own items have actions worth listing; a shop slot has none.
+    if (inventoryType !== InventoryType.PLAYER || !isSlotWithItem(item)) return;
+
+    dismissTooltip();
+    openContextMenu(item as SlotWithItem, event.clientX, event.clientY);
+  }
+
   function onclick(event: MouseEvent) {
+    dismissTooltip();
+
     if (!isSlotWithItem(item)) return;
 
     // ctrl+click sends the item to the other pane, alt+click uses it. Both are
@@ -106,15 +145,19 @@
   class="slot"
   class:filled
   class:unavailable={!available}
-  class:hotbar={isHotbarSlot}
+  class:hotslot={isHotslot}
   style:background-image={imageUrl ? `url(${imageUrl})` : undefined}
   use:draggable={{ source, canDrag: () => available }}
   use:droppable={{ canDrop, ondrop: accept }}
   {onclick}
+  {oncontextmenu}
+  {onmouseenter}
+  onmouseleave={dismissTooltip}
+  onpointerdown={dismissTooltip}
 >
   {#if filled}
     <div class="head">
-      {#if isHotbarSlot}<span class="hotkey">{item.slot}</span>{/if}
+      {#if isHotslot}<span class="hotkey">{item.slot}</span>{/if}
       <span class="weight">{weightLabel}</span>
       <span class="count">{item.count ? `${item.count.toLocaleString('en-us')}x` : ''}</span>
     </div>
@@ -172,7 +215,7 @@
 
   /* A hotbar slot is reachable by number key without opening anything, so it reads as
      slightly raised rather than as another cell in the grid. */
-  .hotbar {
+  .hotslot {
     background-color: var(--surface-raised);
   }
 

@@ -38,14 +38,57 @@ const items = {
     usable: true,
     close: true,
     count: 0,
+    ammoName: 'ammo-9',
+    description: 'A **standard** sidearm.\n\nHolds 12 rounds.',
+    // Grouped and ungrouped buttons together, which is what the context menu has to
+    // collapse into submenus without losing each button's original index.
+    buttons: [
+      { label: 'Inspect' },
+      { label: 'Unload' },
+      { label: 'Paint red', group: 'Paint' },
+      { label: 'Paint blue', group: 'Paint' },
+    ],
   },
+  'ammo-9': { name: 'ammo-9', label: '9mm Rounds', stack: true, usable: false, close: false, count: 0 },
+  at_suppressor: { name: 'at_suppressor', label: 'Suppressor', stack: false, usable: false, close: false, count: 0 },
+  at_flashlight: { name: 'at_flashlight', label: 'Flashlight', stack: false, usable: false, close: false, count: 0 },
 };
 
 debugData([
   {
     action: 'init',
     data: {
-      locale: { ui_use: 'Use', ui_give: 'Give', ui_close: 'Close', $: '$' },
+      // client.lua:1272-1278 forwards every ui_* key plus `$` and ammo_type. Mirrored
+      // here from locales/en.json so the dev harness exercises the same label paths the
+      // game does — an empty label looks like a missing element rather than a missing
+      // translation, which is exactly the sort of thing a harness should not hide.
+      locale: {
+        $: '$',
+        ammo_type: 'Ammo type',
+        ui_added: 'Added',
+        ui_alt_lmb: 'Fast use an item',
+        ui_ammo: 'Ammo',
+        ui_close: 'Close',
+        ui_components: 'Components',
+        ui_copy: 'Copy serial number',
+        ui_ctrl_c: "When hovering over a weapon, copies it's serial number",
+        ui_ctrl_lmb: 'Fast move a stack of items into another inventory',
+        ui_ctrl_shift_lmb: 'Fast move half a stack of items into another inventory',
+        ui_drop: 'Drop',
+        ui_durability: 'Durability',
+        ui_equipped: 'Equipped',
+        ui_give: 'Give',
+        ui_holstered: 'Holstered',
+        ui_remove_ammo: 'Remove ammo',
+        ui_removeattachments: 'Remove attachments',
+        ui_removed: 'Removed',
+        ui_rmb: 'Open item context menu',
+        ui_serial: 'Serial number',
+        ui_shift_drag: 'Split item quantity into half',
+        ui_tint: 'Tint',
+        ui_use: 'Use',
+        ui_usefulcontrols: 'Useful Controls',
+      },
       items,
       imagepath: '/images',
       leftInventory: {
@@ -63,7 +106,13 @@ debugData([
             name: 'WEAPON_PISTOL',
             count: 1,
             weight: 1000,
-            metadata: { durability: 62, serial: 'AB12CD34' },
+            metadata: {
+              durability: 62,
+              serial: 'AB12CD34',
+              ammo: 9,
+              components: ['at_suppressor', 'at_flashlight'],
+              type: 'Sidearm',
+            },
           },
           { slot: 7, name: 'cola', count: 5, weight: 500 },
         ],
