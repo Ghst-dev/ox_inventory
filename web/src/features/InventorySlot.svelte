@@ -238,7 +238,10 @@
   .slot:global([data-dnd-over]) {
     border-color: var(--color-primary);
     border-style: dashed;
-    background-color: var(--primary-glow);
+    /* Composited over the slot's own surface. --primary-glow is an 8%-alpha tint, so
+       assigning it here would drop the sunken surface and let the game show through the
+       one slot you are about to drop onto — see tokens.css. */
+    background-color: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
   }
 
   .head,

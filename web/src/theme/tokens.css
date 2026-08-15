@@ -128,7 +128,23 @@
      more blur does, and costs nothing per frame. */
   --edge-highlight: rgba(255, 255, 255, 0.06);
 
-  /* Accent glows, same alphas as the site. */
+  /*
+   * Accent glows, same alphas as the site.
+   *
+   * These are TINTS, to be composited over a surface — never a surface themselves.
+   * --primary-glow is 8% alpha, so
+   *
+   *     background: var(--primary-glow);              WRONG on anything with a surface
+   *
+   * discards whatever opaque background the element had and leaves it 92% transparent,
+   * which in a game overlay means the scene shows through the one element you are
+   * pointing at. Composite instead:
+   *
+   *     background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-panel));
+   *
+   * Assigning the raw token is only correct where the element has no background of its
+   * own and is already sitting on a panel — a menu row, a calendar range.
+   */
   --primary-glow: rgba(34, 211, 238, 0.08);
   --primary-glow-border: rgba(34, 211, 238, 0.25);
   --action-glow: rgba(0, 229, 255, 0.35);

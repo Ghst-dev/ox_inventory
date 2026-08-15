@@ -170,7 +170,8 @@
 
   /* Set by the droppable action at runtime, so :global keeps Svelte from pruning it. */
   .verb:global([data-dnd-over]) {
-    background: var(--primary-glow);
+    /* Tint over the button's surface, not in place of it — see tokens.css. */
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-panel));
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
