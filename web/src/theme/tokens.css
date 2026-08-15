@@ -1,0 +1,143 @@
+/*
+ * Ghst design tokens — ported from the Ghostbase site's design system
+ * (RG/Ghostbase/src/lib/styles/tokens.css) so the server UI and the site read as
+ * the same brand.
+ *
+ * Carried over unchanged: the near-black neutrals, the two-tier cyan accent, the
+ * 6/8/12 radii, the 4px spacing scale, the motion durations and easings, and the
+ * neutral (never accent-tinted) resting shadows.
+ *
+ * Deliberately changed for a game overlay — see README for the reasoning:
+ *   - no light mode: this always sits over the game
+ *   - type scale shifted down ~1 step: 16px body is a reading size, not a HUD size
+ *   - surfaces are translucent, because the game shows through
+ *   - a success color was added; the site's palette has danger/warn but no success
+ *
+ * ACCENT SYSTEM — the site's rule, kept verbatim because it is what makes the
+ * palette feel deliberate rather than just "cyan":
+ *
+ *   --color-primary (#22d3ee)  calm / idle. Anything on screen at rest: buttons,
+ *     borders, links, general chrome.
+ *   --color-action  (#00e5ff)  something just happened. Only for live moments:
+ *     flashes, pop-ins, fill animations, a job completing.
+ *
+ * If it is on screen at rest, primary. If it is reacting to an event, action.
+ */
+
+/*
+ * `static` matters: by default Tailwind only emits the theme variables some
+ * utility actually references, so a token used only as `var(--color-action)`
+ * inside a Svelte <style> block would resolve to nothing. `static` emits all of
+ * them — this is a palette meant to be read both ways.
+ */
+@theme static {
+  /* ---- Type -------------------------------------------------------------
+     Inter if the machine has it, system stack otherwise. The site pulls Inter
+     from Google Fonts; that is not safe here, because CEF cannot be assumed to
+     have network access and a webfont that fails to load swaps mid-session. To
+     guarantee Inter, drop Inter.woff2 in web/public/fonts/ and @font-face it in
+     base.css — see README. */
+  --font-sans: 'Inter', 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* One step down from the site's scale. Its 16px body is sized for reading a
+     page; an overlay is glanced at while driving and competes with the HUD. */
+  --text-meta: 10px;
+  --text-label: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-subheading: 16px;
+  --text-heading: 22px;
+  --text-display: 30px;
+
+  --leading-tight: 1.05;
+  --leading-heading: 1.2;
+  --leading-body: 1.6;
+
+  --tracking-tight: -0.03em;
+  --tracking-display: -0.02em;
+  --tracking-label: 0.06em;
+  --tracking-loose: 0.1em;
+
+  /* ---- Surfaces / neutrals ---------------------------------------------
+     Same near-black system as the site. */
+  --color-bg: #0a0a0a;
+  --color-surface: #111111;
+  --color-surface-2: #1e1e1e;
+  --color-border: #2a2a2a;
+
+  --color-white: #ffffff;
+  --color-gray: #a1a1a1;
+  --color-dim: #6b6b6b;
+
+  /* ---- Accent — two-tier cyan ------------------------------------------ */
+  --color-primary: #22d3ee;
+  --color-action: #00e5ff;
+
+  /* ---- Semantic feedback ------------------------------------------------
+     danger/warn are the site's. success is new: the site never needed one, and a
+     game UI does (stored, paid, job complete). Picked far enough around the wheel
+     from #22d3ee to not read as a dimmer cyan. */
+  --color-danger: #ff5050;
+  --color-danger-text: #ff6464;
+  --color-warn: #ffa03c;
+  --color-success: #3ecf8e;
+
+  /* ---- Shape ------------------------------------------------------------ */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* ---- Depth ------------------------------------------------------------
+     Neutral at rest, exactly as on the site — accent tint is reserved for hover
+     and focus, so a resting panel never glows at the player. Heavier than the
+     site's because a panel here has to separate from whatever the game is
+     rendering behind it. */
+  --shadow-panel: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --shadow-raised: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  /* backdrop-blur-panel. Only meaningful for one in-page layer over another —
+     it cannot blur the game. See README and client/main.lua. */
+  --blur-panel: 12px;
+
+  /* ---- Motion ----------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+ * Tokens with no Tailwind namespace. Plain variables, used via var().
+ */
+:root {
+  /* Translucent surfaces. The opaque tokens above are the source of truth; these
+     are the same colors at the alpha an overlay wants. Raise the alpha on
+     anything holding dense text — a vehicle list over bright daylight needs it. */
+  --surface-panel: rgba(17, 17, 17, 0.92);
+  --surface-raised: rgba(30, 30, 30, 0.92);
+  --surface-sunken: rgba(10, 10, 10, 0.7);
+  --scrim: rgba(10, 10, 10, 0.6);
+
+  /* Glass edge: a 1px top highlight sells "pane of glass" far more cheaply than
+     more blur does, and costs nothing per frame. */
+  --edge-highlight: rgba(255, 255, 255, 0.06);
+
+  /* Accent glows, same alphas as the site. */
+  --primary-glow: rgba(34, 211, 238, 0.08);
+  --primary-glow-border: rgba(34, 211, 238, 0.25);
+  --action-glow: rgba(0, 229, 255, 0.35);
+
+  --ring-accent: 0 0 0 3px var(--primary-glow);
+  --ring-action: 0 0 0 3px var(--action-glow);
+
+  --dur-fast: 0.15s;
+  --dur-base: 0.2s;
+  --dur-slow: 0.3s;
+  --dur-enter: 0.65s;
+}

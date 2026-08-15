@@ -1,0 +1,23 @@
+# pnpm 11 no longer reads the "pnpm" field in package.json, so its settings live here.
+#
+# This resource was on bun (a bun.lock and nothing else). Tools/sync.sh has no bun
+# branch — it picks pnpm on a pnpm-lock.yaml, yarn on a yarn.lock, and otherwise falls
+# through to `npm ci`, which fails outright with no package-lock.json. ox_lib and
+# ox_target are both on pnpm, so this one follows.
+
+# pnpm blocks dependency build scripts by default and, as of pnpm 11, `install` exits
+# non-zero (ERR_PNPM_IGNORED_BUILDS) until every blocked script is explicitly allowed or
+# denied here. Listing esbuild under onlyBuiltDependencies is not enough on its own — the
+# allowBuilds verdict is what clears the error, and pnpm rewrites this file with a
+# "set this to true or false" placeholder if the entry is missing.
+onlyBuiltDependencies:
+  - esbuild
+
+allowBuilds:
+  esbuild: true
+
+# `pnpm run` re-runs `pnpm install` as a pre-flight check, which exits 1 on the
+# ignored-builds warning above and kills the script before it starts. esbuild's
+# postinstall is not actually needed here -- on Windows the @esbuild/win32-x64
+# package ships esbuild.exe directly -- so skip the check.
+verifyDepsBeforeRun: false

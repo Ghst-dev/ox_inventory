@@ -1,0 +1,53 @@
+/*
+ * Stylesheet entry point, imported once from main.ts.
+ *
+ * Order matters: tailwindcss first (it defines @theme and the layers), then the tokens
+ * that extend the theme, then the base rules that consume them.
+ *
+ * theme/tokens.css and theme/base.css are copies of the ones in ox_lib and
+ * Tools/ghst_template, not a shared package — cross-resource theme sharing was
+ * deliberately ruled out. If the palette changes, it changes in all three places.
+ */
+
+@import 'tailwindcss';
+@import './theme/tokens.css';
+@import './theme/base.css';
+
+@source './';
+
+/*
+ * CAUTION — component class names share a namespace with Tailwind's utilities.
+ *
+ * `@source` scans these files, so writing class="ring" or class="container" makes
+ * Tailwind *generate* its own `.ring` / `.container` utility, which then applies to the
+ * element alongside the component's scoped styles. Both were shipped by accident in
+ * ox_lib and took a while to diagnose, because Svelte's scoping does not protect against
+ * it — a hash class is added, but a global utility of the same name still matches.
+ *
+ * This resource is more exposed than ox_lib was: the React stylesheet leans on names
+ * like `.inventory-grid-container` and `.item-slot-wrapper`, and the tempting short
+ * forms are exactly the dangerous ones. Avoid bare utility names: ring, container, grow,
+ * group, block, flex, fixed, absolute, hidden, static, table, contents, grid, border.
+ */
+
+/*
+ * Unlike ox_lib, this page is interactive whenever it is on screen at all — the game
+ * takes focus away entirely while the inventory is open, so there is no click to pass
+ * through. #root can therefore accept pointer events normally.
+ */
+#root {
+  position: fixed;
+  inset: 0;
+}
+
+/* Dev-only. main.ts adds .nui-browser to <html> when running outside the game, so the
+   deliberately transparent overlay is visible during `pnpm dev`. The React build used a
+   remote screenshot from imgur here; a gradient needs no network, which matters because
+   fetch is nulled out in game and imgur is not reachable from CEF anyway. */
+.nui-browser body {
+  background:
+    radial-gradient(ellipse 50% 40% at 18% 12%, #4a6fa5 0%, transparent 60%),
+    radial-gradient(ellipse 40% 50% at 78% 22%, #b5764a 0%, transparent 62%),
+    radial-gradient(ellipse 60% 40% at 60% 85%, #2e5a46 0%, transparent 60%),
+    linear-gradient(160deg, #1a2130 0%, #0f1218 55%, #14100c 100%);
+}
