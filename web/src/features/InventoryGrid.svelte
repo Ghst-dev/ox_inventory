@@ -91,7 +91,7 @@
      */
     width: calc(
       var(--slot-size) * var(--grid-cols) + var(--slot-gap) * (var(--grid-cols) - 1) +
-        var(--grid-scrollbar) + 26px
+        var(--grid-gutter) + 26px
     );
     padding: 12px;
     background: var(--surface-panel);
@@ -130,13 +130,18 @@
     grid-template-columns: repeat(var(--grid-cols), var(--slot-size));
     grid-auto-rows: var(--slot-size);
     gap: var(--slot-gap);
-    overflow-y: auto;
 
-    /* Reserve the gutter whether or not this pane currently overflows, so a six-slot
-       crafting bench and a forty-slot inventory align rather than differing by the
-       width of a scrollbar. Replaces a padding-right that was doing half this job and
-       throwing the width calculation off. */
-    scrollbar-gutter: stable;
+    /* The columns are a fixed width and there are always exactly --grid-cols of them,
+       so there is no circumstance in which this should scroll sideways. Saying so
+       outright is what actually guarantees no horizontal scrollbar; the width
+       arithmetic above only keeps that from clipping anything. */
+    overflow-x: hidden;
+
+    /* Always `scroll`, never `auto`: a six-slot crafting bench and a forty-slot
+       inventory then reserve the same gutter and their columns line up, instead of
+       differing by the width of a scrollbar depending on how full they are. The track
+       is transparent, so an unused one is invisible. */
+    overflow-y: scroll;
   }
 
   .sentinel {

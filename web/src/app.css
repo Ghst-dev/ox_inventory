@@ -56,10 +56,22 @@
   --grid-cols: 5;
   --grid-rows: 5;
 
-  /* Width of the grid's scrollbar. A variable because the pane has to reserve exactly
-     this much: the pane's width is what decides whether the columns fit, and the
-     scrollbar eats into the same box. */
+  /*
+   * Two numbers, deliberately different.
+   *
+   * --grid-scrollbar is how wide the scrollbar is *drawn*. --grid-gutter is how much
+   * width the pane *reserves* for it, and it is generous on purpose: how much a
+   * scrolling container actually takes depends on whether the browser honours a styled
+   * ::-webkit-scrollbar width when reserving the gutter, and it does not always. Sizing
+   * the pane to exactly --grid-scrollbar is an exact fit that fails on any client that
+   * reserves a classic scrollbar instead — the fifth column gets clipped and the grid
+   * scrolls sideways.
+   *
+   * The slack is dead space at the right of the grid. It is invisible; a clipped column
+   * is not.
+   */
   --grid-scrollbar: 6px;
+  --grid-gutter: 16px;
 
   /*
    * How far to push the inventory aside for the dev drawer. Always 0 in game — the
