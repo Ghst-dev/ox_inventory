@@ -83,9 +83,15 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    /* Five columns, four gaps, the panel's own padding, and room for the scrollbar. */
+    /*
+     * Everything the pane has to fit, spelled out. Preflight makes this border-box, so
+     * the width covers the panel's own 12px padding and 1px border as well as the
+     * columns, the gaps and the scrollbar gutter. Being two pixels short here is enough
+     * to put a horizontal scrollbar under the grid, which is how this was found.
+     */
     width: calc(
-      var(--slot-size) * var(--grid-cols) + var(--slot-gap) * (var(--grid-cols) - 1) + 34px
+      var(--slot-size) * var(--grid-cols) + var(--slot-gap) * (var(--grid-cols) - 1) +
+        var(--grid-scrollbar) + 26px
     );
     padding: 12px;
     background: var(--surface-panel);
@@ -125,7 +131,12 @@
     grid-auto-rows: var(--slot-size);
     gap: var(--slot-gap);
     overflow-y: auto;
-    padding-right: 4px;
+
+    /* Reserve the gutter whether or not this pane currently overflows, so a six-slot
+       crafting bench and a forty-slot inventory align rather than differing by the
+       width of a scrollbar. Replaces a padding-right that was doing half this job and
+       throwing the width calculation off. */
+    scrollbar-gutter: stable;
   }
 
   .sentinel {

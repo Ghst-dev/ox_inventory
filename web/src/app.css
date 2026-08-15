@@ -56,6 +56,11 @@
   --grid-cols: 5;
   --grid-rows: 5;
 
+  /* Width of the grid's scrollbar. A variable because the pane has to reserve exactly
+     this much: the pane's width is what decides whether the columns fit, and the
+     scrollbar eats into the same box. */
+  --grid-scrollbar: 6px;
+
   /*
    * How far to push the inventory aside for the dev drawer. Always 0 in game — the
    * drawer only exists in a dev build — but it has to be declared here so the calc in
@@ -84,7 +89,7 @@
  * scrollbars altogether, which leaves no indication that a 5000-slot shop scrolls.
  */
 .slot-grid::-webkit-scrollbar {
-  width: 6px;
+  width: var(--grid-scrollbar);
 }
 
 /* Item art is small PNGs drawn at a size they were not authored for. Chromium's default
