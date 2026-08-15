@@ -41,6 +41,15 @@
 }
 
 /*
+ * Resource-local, not a Ghostbase token: nothing else on the server has a concept of a
+ * slot. Kept as a variable because the grid width, the drag preview and the slot itself
+ * all have to agree on it, and they live in three different components.
+ */
+:root {
+  --slot-size: 88px;
+}
+
+/*
  * Set on <body> by the drag layer for the duration of a drag. The grabbing cursor has to
  * be global rather than on the slot: once the pointer leaves the source slot the cursor
  * would otherwise revert, even though the drag is still in progress.

@@ -27,8 +27,8 @@
     top: 0;
     left: 0;
     z-index: 100;
-    width: 88px;
-    height: 88px;
+    width: var(--slot-size);
+    height: var(--slot-size);
     background-color: var(--surface-raised);
     background-size: 70%;
     background-position: center;

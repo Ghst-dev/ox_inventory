@@ -1,0 +1,260 @@
+<script lang="ts">
+  import { draggable, droppable } from '../lib/dnd.svelte';
+  import { inv } from '../lib/inventory.svelte';
+  import { onBuy, onCraft, onDrop, onUse } from '../lib/actions';
+  import { canCraftItem, canPurchaseItem, getItemUrl, isSlotWithItem } from '../lib/helpers';
+  import { items as itemDefs, locale } from '../lib/state.svelte';
+  import { InventoryType, type DragSource, type Inventory, type Slot, type SlotWithItem } from '../typings';
+  import WeightBar from './WeightBar.svelte';
+
+  let {
+    item,
+    inventoryType,
+    inventoryGroups,
+  }: {
+    item: Slot;
+    inventoryType: Inventory['type'];
+    inventoryGroups: Inventory['groups'];
+  } = $props();
+
+  /**
+   * One slot. Both a drag source and a drop target, as in the React build.
+   *
+   * The per-slot refreshSlots subscription is gone. Upstream gave every visible slot its
+   * own listener that scanned the whole payload looking for itself, purely so it could
+   * cancel an in-flight drag when the server rewrote the slot under the cursor — thirty
+   * or more listeners doing the same scan. That now happens once, at the root.
+   */
+
+  const filled = $derived(isSlotWithItem(item));
+
+  const purchasable = $derived(
+    canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }, inv.leftInventory.groups),
+  );
+  const craftable = $derived(canCraftItem(item, inventoryType, inv.leftInventory.items));
+  const available = $derived(purchasable && craftable);
+
+  const imageUrl = $derived(filled ? getItemUrl(item as SlotWithItem) : undefined);
+
+  // price, currency and grade only exist once a slot holds something; `filled` is the
+  // guard, but the type only narrows through an explicit cast.
+  const held = $derived(filled ? (item as SlotWithItem) : null);
+
+  const label = $derived(
+    item.metadata?.label ? item.metadata.label : (itemDefs[item.name!]?.label ?? item.name),
+  );
+
+  // Slots 1-5 of the player's inventory are the hotbar, and are numbered on the tile.
+  const isHotbarSlot = $derived(inventoryType === InventoryType.PLAYER && item.slot <= 5);
+
+  const source = (): DragSource | null => {
+    // A shop slot is draggable even with a zero count so the purchase can be refused
+    // with a message; elsewhere an empty slot is simply not a source.
+    if (!isSlotWithItem(item, inventoryType !== InventoryType.SHOP)) return null;
+
+    return {
+      inventory: inventoryType,
+      item: { name: item.name!, slot: item.slot },
+      image: imageUrl ? `url(${imageUrl})` : undefined,
+    };
+  };
+
+  function accept(incoming: DragSource) {
+    switch (incoming.inventory) {
+      case InventoryType.SHOP:
+        return onBuy(incoming, { inventory: inventoryType, item: { slot: item.slot } });
+      case InventoryType.CRAFTING:
+        return onCraft(incoming, { inventory: inventoryType, item: { slot: item.slot } });
+      default:
+        return onDrop(incoming, { inventory: inventoryType, item: { slot: item.slot } });
+    }
+  }
+
+  const canDrop = (incoming: DragSource) =>
+    (incoming.item.slot !== item.slot || incoming.inventory !== inventoryType) &&
+    inventoryType !== InventoryType.SHOP &&
+    inventoryType !== InventoryType.CRAFTING;
+
+  function onclick(event: MouseEvent) {
+    if (!isSlotWithItem(item)) return;
+
+    // ctrl+click sends the item to the other pane, alt+click uses it. Both are
+    // documented in the controls panel and are how most players actually move things.
+    if (event.ctrlKey && inventoryType !== 'shop' && inventoryType !== 'crafting') {
+      onDrop({ inventory: inventoryType, item: { name: item.name!, slot: item.slot } });
+    } else if (event.altKey && inventoryType === InventoryType.PLAYER) {
+      onUse(item);
+    }
+  }
+
+  const weightLabel = $derived.by(() => {
+    if (!filled || !item.weight) return '';
+    return item.weight >= 1000
+      ? `${(item.weight / 1000).toLocaleString('en-us', { minimumFractionDigits: 2 })}kg`
+      : `${item.weight.toLocaleString('en-us')}g`;
+  });
+</script>
+
+<!-- The click handler is a modifier shortcut (ctrl to move, alt to use), not the slot's
+     primary affordance — dragging is. Making this a <button> would put thirty-plus tab
+     stops in a game overlay whose only keyboard contract is Escape to close, so the
+     roles and key handlers a11y wants here would describe an interaction that does not
+     exist. -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="slot"
+  class:filled
+  class:unavailable={!available}
+  class:hotbar={isHotbarSlot}
+  style:background-image={imageUrl ? `url(${imageUrl})` : undefined}
+  use:draggable={{ source, canDrag: () => available }}
+  use:droppable={{ canDrop, ondrop: accept }}
+  {onclick}
+>
+  {#if filled}
+    <div class="head">
+      {#if isHotbarSlot}<span class="hotkey">{item.slot}</span>{/if}
+      <span class="weight">{weightLabel}</span>
+      <span class="count">{item.count ? `${item.count.toLocaleString('en-us')}x` : ''}</span>
+    </div>
+
+    <div class="foot">
+      {#if inventoryType !== InventoryType.SHOP && item.durability !== undefined}
+        <WeightBar percent={item.durability} durability />
+      {/if}
+
+      {#if inventoryType === InventoryType.SHOP && held?.price !== undefined && held.price > 0}
+        {#if held.currency && held.currency !== 'money' && held.currency !== 'black_money'}
+          <!-- Priced in an item rather than cash: show that item's own icon. -->
+          <div class="price currency">
+            <img src={getItemUrl(held.currency)} alt="" />
+            <span>{held.price.toLocaleString('en-us')}</span>
+          </div>
+        {:else}
+          <div class="price" class:cash={held.currency === 'money' || !held.currency}>
+            {locale.$ || '$'}{held.price.toLocaleString('en-us')}
+          </div>
+        {/if}
+      {/if}
+
+      <div class="label">{label}</div>
+    </div>
+  {/if}
+</div>
+
+<style>
+  .slot {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: var(--slot-size);
+    background-color: var(--surface-sunken);
+    background-size: 62%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      opacity var(--dur-fast) var(--ease-out);
+  }
+
+  .filled {
+    cursor: grab;
+  }
+
+  .filled:hover {
+    border-color: var(--primary-glow-border);
+  }
+
+  /* A hotbar slot is reachable by number key without opening anything, so it reads as
+     slightly raised rather than as another cell in the grid. */
+  .hotbar {
+    background-color: var(--surface-raised);
+  }
+
+  /* Cannot afford it, cannot craft it, or the wrong job. Upstream used a CSS filter for
+     this; a border and dimmed contents say the same thing without desaturating the
+     item image into an unrecognisable grey blob. */
+  .unavailable {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* Set imperatively by the droppable action, so :global keeps Svelte from pruning it
+     — see the note in dnd.svelte.ts. */
+  .slot:global([data-dnd-over]) {
+    border-color: var(--color-primary);
+    border-style: dashed;
+    background-color: var(--primary-glow);
+  }
+
+  .head,
+  .foot {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 5px;
+    font-size: var(--text-meta);
+    line-height: 1.2;
+    background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  }
+
+  .foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 0;
+    background: none;
+  }
+
+  .hotkey {
+    color: var(--color-primary);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .weight {
+    color: var(--color-dim);
+  }
+
+  .count {
+    margin-left: auto;
+    color: var(--color-white);
+  }
+
+  .label {
+    padding: 3px 5px;
+    background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+    color: var(--color-gray);
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .price {
+    padding: 2px 5px;
+    text-align: right;
+    color: var(--color-danger-text);
+  }
+
+  .price.cash {
+    color: var(--color-success);
+  }
+
+  .price.currency {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+  }
+
+  .price.currency img {
+    width: 12px;
+    height: 12px;
+    image-rendering: -webkit-optimize-contrast;
+  }
+</style>
