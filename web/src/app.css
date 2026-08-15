@@ -40,6 +40,16 @@
   inset: 0;
 }
 
+/*
+ * Set on <body> by the drag layer for the duration of a drag. The grabbing cursor has to
+ * be global rather than on the slot: once the pointer leaves the source slot the cursor
+ * would otherwise revert, even though the drag is still in progress.
+ */
+body.inv-dragging,
+body.inv-dragging * {
+  cursor: grabbing !important;
+}
+
 /* Dev-only. main.ts adds .nui-browser to <html> when running outside the game, so the
    deliberately transparent overlay is visible during `pnpm dev`. The React build used a
    remote screenshot from imgur here; a gradient needs no network, which matters because

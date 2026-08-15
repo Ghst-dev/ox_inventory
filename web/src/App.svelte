@@ -2,6 +2,9 @@
   import { onDestroy, onMount } from 'svelte';
   import { fetchNui, onNuiEvent, isEnvBrowser } from './lib/nui';
   import { applyInit, locale, items, imagePath, type InitPayload } from './lib/state.svelte';
+  import { suppressNativeDrag } from './lib/dnd.svelte';
+  import DragPreview from './features/DragPreview.svelte';
+  import DragHarness from './features/DragHarness.svelte';
   import type { Inventory } from './typings';
 
   /**
@@ -31,6 +34,7 @@
 
   onMount(() => {
     fetchNui('uiLoaded', {});
+    return suppressNativeDrag();
   });
 
   onDestroy(offInit);
@@ -39,7 +43,13 @@
   const localeCount = $derived(Object.keys(locale).length);
 </script>
 
+<!-- The preview follows the cursor for the whole app, so it lives above whatever is
+     being dragged rather than inside any one pane. -->
+<DragPreview />
+
 {#if isEnvBrowser()}
+  <DragHarness />
+
   <!-- Scaffold readout, dev only. Replaced by the real two-pane inventory in phase 2;
        until then this is what proves the bridge works end to end. -->
   <div class="scaffold">
@@ -68,11 +78,12 @@
 {/if}
 
 <style>
+  /* Parked in a corner rather than centred: the phase 1 harness owns the middle of the
+     screen, and this is now a status readout rather than the main content. */
   .scaffold {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    right: 24px;
+    bottom: 24px;
     min-width: 320px;
     padding: 20px 24px;
     background: var(--surface-panel);
