@@ -129,15 +129,8 @@ Item('parachute', function(data, slot)
 	end
 end)
 
-Item('phone', function(data, slot)
-	local success, result = pcall(function()
-		return exports.npwd:isPhoneVisible()
-	end)
-
-	if success then
-		exports.npwd:setPhoneVisible(not result)
-	end
-end)
+-- The stock Item('phone') handler toggled npwd's UI; both npwd and the 'phone' item were
+-- removed during the framework strip. Register your own handler here when you build a phone.
 
 Item('clothing', function(data, slot)
 	local metadata = slot.metadata

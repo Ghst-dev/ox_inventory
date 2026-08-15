@@ -1258,13 +1258,8 @@ RegisterNetEvent('ox_inventory:setPlayerInventory', function(currentDrops, inven
 		end
 	end
 
-	local phone = Items.phone
-
-	if phone and phone.count < 1 then
-		pcall(function()
-			return exports.npwd:setPhoneDisabled(true)
-		end)
-	end
+	-- Stock ox_inventory disabled npwd's phone here when the player had no 'phone' item.
+	-- npwd was removed during the framework strip.
 
 	client.setPlayerData('inventory', inventory)
 	client.setPlayerData('weight', weight)

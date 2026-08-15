@@ -1,0 +1,31 @@
+# Deploys to [ox]/ox_inventory, replacing the v2.47.9 release copy ghst_sv tracks.
+#
+# This file exists only on the ghst_ui branch. main stays a clean mirror of
+# overextended/ox_inventory, and Tools/sync.sh looks for .sync in the *working tree* — so
+# ghst_ui has to be the checked-out branch when you sync, exactly as with ox_lib.
+category=[ox]
+
+# Match what an upstream release ships: no NUI source, no lockfile-only tooling. web/build
+# is produced by the build step and is what ui_page points at.
+exclude=web/src
+exclude=web/node_modules
+
+# --- server content, not fork content ----------------------------------------
+#
+# These two live in the deployed tree and must survive a sync. rsync --delete and the
+# robocopy /MIR /XD fallback both leave excluded paths alone rather than deleting them,
+# so the copies under [ox]/ox_inventory stay put and stay tracked by ghst_sv's git.
+#
+#   data      the real item list, shops, stashes and vehicles. Upstream's data/items.lua
+#             is 593 lines of demo items (testburger and friends); ours is the server's
+#             actual 224-line list. Syncing the fork over it would wipe the inventory.
+#
+#   web/images  367 item images against upstream's 198 — roughly 169 are ours. Note the
+#             extras are also mixed-case (.PNG as well as .png), which survives here but
+#             would not survive a fork-side re-add on a case-insensitive checkout.
+#
+# The consequence for NUI development: item images are resolved from client.imagepath
+# (nui://ox_inventory/web/images), so those ~169 render broken in the browser dev server.
+# That is expected, not a bug to chase.
+exclude=data
+exclude=web/images
