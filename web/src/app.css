@@ -55,6 +55,18 @@
   --slot-gap: 6px;
   --grid-cols: 5;
   --grid-rows: 5;
+
+  /*
+   * How far to push the inventory aside for the dev drawer. Always 0 in game — the
+   * drawer only exists in a dev build — but it has to be declared here so the calc in
+   * Inventory.svelte resolves rather than falling back to an invalid length.
+   *
+   * The drawer overlays the left edge, and the inventory is centred, so on a narrower
+   * window the drawer sits on top of the first column. That is not merely ugly: the
+   * drag layer resolves drops with elementFromPoint, which then finds the drawer
+   * instead of the slot, and dragging silently does nothing while the drawer is open.
+   */
+  --dev-shift: 0px;
 }
 
 /*

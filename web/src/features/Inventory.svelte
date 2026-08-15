@@ -134,7 +134,9 @@
   .wrapper {
     position: absolute;
     top: 50%;
-    left: 50%;
+    /* --dev-shift is 0 everywhere except a dev build with the drawer open; see app.css
+       for why the drawer must not overlap the panes. */
+    left: calc(50% + var(--dev-shift) / 2);
     transform: translate(-50%, -50%);
     display: flex;
     gap: 20px;

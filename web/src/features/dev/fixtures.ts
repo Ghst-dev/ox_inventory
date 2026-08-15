@@ -1,0 +1,207 @@
+/**
+ * Payload fixtures for browser development.
+ *
+ * Every shape here is taken from the Lua that produces it, so the harness exercises the
+ * same paths the game does. Where a field is easy to get subtly wrong the source line is
+ * cited — an inventory that renders correctly against a made-up payload proves nothing.
+ *
+ * Browser only. main.ts fires `init` on load; DevPanel drives everything after.
+ */
+
+import type { Inventory, ItemData, SlotWithItem } from '../../typings';
+
+/**
+ * Lua only ever sends *occupied* slots — setupInventory expands them into the dense
+ * array the grid needs. Typing the fixtures as SlotWithItem rather than Slot is what
+ * lets a shop entry carry price/currency/grade and a recipe carry ingredients/duration;
+ * those fields live on SlotWithItem, and Inventory['items'] is the wider Slot[].
+ */
+const occupied = (list: SlotWithItem[]): SlotWithItem[] => list;
+
+/**
+ * client.lua:1272-1278 forwards every `ui_*` locale key, plus `$` and `ammo_type`.
+ * Mirrored from locales/en.json rather than trimmed to what is currently rendered — a
+ * missing label looks like a missing element, which is exactly what a harness should
+ * not hide.
+ */
+export const locale: Record<string, string> = {
+  $: '$',
+  ammo_type: 'Ammo type',
+  ui_added: 'Added',
+  ui_alt_lmb: 'Fast use an item',
+  ui_ammo: 'Ammo',
+  ui_close: 'Close',
+  ui_components: 'Components',
+  ui_copy: 'Copy serial number',
+  ui_ctrl_c: "When hovering over a weapon, copies it's serial number",
+  ui_ctrl_lmb: 'Fast move a stack of items into another inventory',
+  ui_ctrl_shift_lmb: 'Fast move half a stack of items into another inventory',
+  ui_drop: 'Drop',
+  ui_durability: 'Durability',
+  ui_equipped: 'Equipped',
+  ui_give: 'Give',
+  ui_holstered: 'Holstered',
+  ui_remove_ammo: 'Remove ammo',
+  ui_removeattachments: 'Remove attachments',
+  ui_removed: 'Removed',
+  ui_rmb: 'Open item context menu',
+  ui_serial: 'Serial number',
+  ui_shift_drag: 'Split item quantity into half',
+  ui_tint: 'Tint',
+  ui_use: 'Use',
+  ui_usefulcontrols: 'Useful Controls',
+};
+
+const item = (name: string, label: string, extra: Partial<ItemData> = {}): ItemData => ({
+  name,
+  label,
+  stack: true,
+  usable: true,
+  close: true,
+  count: 0,
+  ...extra,
+});
+
+export const items: Record<string, ItemData> = {
+  water: item('water', 'Water'),
+  burger: item('burger', 'Burger'),
+  cola: item('cola', 'eCola'),
+  lockpick: item('lockpick', 'Lockpick'),
+  medikit: item('medikit', 'Medikit'),
+  bandage: item('bandage', 'Bandage'),
+  radio: item('radio', 'Radio', { stack: false }),
+  garbage: item('garbage', 'Garbage'),
+  scrapmetal: item('scrapmetal', 'Scrap Metal'),
+  money: item('money', 'Cash', { usable: false }),
+  'ammo-9': item('ammo-9', '9mm Rounds', { usable: false }),
+  at_suppressor: item('at_suppressor', 'Suppressor', { stack: false, usable: false }),
+  at_flashlight: item('at_flashlight', 'Flashlight', { stack: false, usable: false }),
+  WEAPON_PISTOL: item('WEAPON_PISTOL', 'Pistol', {
+    stack: false,
+    ammoName: 'ammo-9',
+    description: 'A **standard** sidearm.\n\nHolds 12 rounds.',
+    // Grouped and ungrouped together: the context menu has to collapse the grouped ones
+    // into a submenu without losing each button's index, which is what useButton wants.
+    buttons: [
+      { label: 'Inspect' },
+      { label: 'Unload' },
+      { label: 'Paint red', group: 'Paint' },
+      { label: 'Paint blue', group: 'Paint' },
+    ],
+  }),
+  WEAPON_KNIFE: item('WEAPON_KNIFE', 'Knife', { stack: false }),
+};
+
+/** The player's own inventory — always the left pane. */
+export const player: Inventory = {
+  id: 'test',
+  type: 'player',
+  label: 'Bob Smith',
+  slots: 40,
+  maxWeight: 30000,
+  // Sparse and out of order, as Lua sends it: setupInventory has to expand this into a
+  // dense array or empty slots are not drop targets.
+  items: occupied([
+    { slot: 7, name: 'cola', count: 5, weight: 500 },
+    { slot: 1, name: 'water', count: 3, weight: 300 },
+    { slot: 3, name: 'lockpick', count: 1, weight: 500 },
+    {
+      slot: 4,
+      name: 'WEAPON_PISTOL',
+      count: 1,
+      weight: 1000,
+      metadata: {
+        durability: 62,
+        serial: 'AB12CD34',
+        ammo: 9,
+        components: ['at_suppressor', 'at_flashlight'],
+        type: 'Sidearm',
+      },
+    },
+    { slot: 2, name: 'burger', count: 2, weight: 440 },
+    // Degrading item: durability above 100 is an expiry timestamp, not a percentage,
+    // and `degrade` is the shelf life in minutes (see itemDurability).
+    {
+      slot: 6,
+      name: 'medikit',
+      count: 1,
+      weight: 200,
+      metadata: { durability: Math.floor(Date.now() / 1000) + 1800, degrade: 60 },
+    },
+  ]),
+  groups: { police: 2 },
+};
+
+export const stash: Inventory = {
+  id: 'stash1',
+  type: 'stash',
+  label: 'Storage',
+  slots: 30,
+  maxWeight: 100000,
+  items: occupied([
+    { slot: 1, name: 'medikit', count: 4, weight: 800 },
+    { slot: 2, name: 'bandage', count: 12, weight: 600 },
+    { slot: 5, name: 'water', count: 8, weight: 800 },
+  ]),
+};
+
+/**
+ * A shop. Prices and currencies drive the slot footer; `grade` gates purchase against
+ * the player's groups, so the last row is deliberately out of reach — the player is
+ * police grade 2, and it wants grade 4.
+ */
+export const shop: Inventory = {
+  id: 'shop1',
+  type: 'shop',
+  label: 'General Store',
+  slots: 12,
+  items: occupied([
+    { slot: 1, name: 'water', count: 50, weight: 100, price: 5 },
+    { slot: 2, name: 'burger', count: 20, weight: 220, price: 12 },
+    { slot: 3, name: 'bandage', count: 15, weight: 50, price: 40, currency: 'black_money' },
+    { slot: 4, name: 'radio', count: 3, weight: 300, price: 250, currency: 'scrapmetal' },
+    // Out of stock: count 0 must block the drag rather than fail on the server.
+    { slot: 5, name: 'medikit', count: 0, weight: 200, price: 100 },
+    { slot: 6, name: 'WEAPON_PISTOL', count: 2, weight: 1000, price: 5000, grade: 4 },
+  ]),
+  groups: { police: 1 },
+};
+
+/**
+ * A crafting bench. `ingredients` below 1 are durability requirements rather than
+ * quantities — powersaw: 0.1 means a saw with at least 10% left.
+ */
+export const crafting: Inventory = {
+  id: 'bench1',
+  type: 'crafting',
+  label: 'Workbench',
+  slots: 6,
+  items: occupied([
+    {
+      slot: 1,
+      name: 'lockpick',
+      count: 1,
+      weight: 500,
+      duration: 5000,
+      ingredients: { scrapmetal: 5, garbage: 2 },
+    },
+    {
+      slot: 2,
+      name: 'bandage',
+      count: 1,
+      weight: 50,
+      duration: 2000,
+      ingredients: { water: 1 },
+    },
+  ]),
+};
+
+/** A bag opened from inside the player's inventory. */
+export const container: Inventory = {
+  id: 'bag1',
+  type: 'container',
+  label: 'Duffel Bag',
+  slots: 10,
+  maxWeight: 20000,
+  items: occupied([{ slot: 1, name: 'money', count: 12500, weight: 0 }]),
+};
