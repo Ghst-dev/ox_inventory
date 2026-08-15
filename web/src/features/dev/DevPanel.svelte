@@ -21,8 +21,9 @@
   /**
    * Re-centre the inventory in the space beside the drawer while it is open.
    *
-   * Half the drawer's width is exactly the offset that turns "centred in the viewport"
-   * into "centred in what is left of it", which is why Inventory.svelte halves this.
+   * Applied as padding-left on the wrapper, which fills the viewport and centres its
+   * contents — so padding of the drawer's full width is what turns "centred in the
+   * viewport" into "centred in what is left of it".
    *
    * Not cosmetic. The drag layer resolves drops with elementFromPoint, so any slot the
    * drawer covers stops being a drop target — dragging onto the first column silently

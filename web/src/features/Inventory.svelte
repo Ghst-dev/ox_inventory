@@ -131,15 +131,28 @@
 {/if}
 
 <style>
+  /*
+   * Centred with flexbox rather than the usual top/left 50% plus a translate.
+   *
+   * The transform is not merely a different way to write this: a transformed element
+   * becomes the containing block for any `position: fixed` descendant, so anything
+   * inside that expected to cover the viewport instead covers this wrapper. That is
+   * what happened to the controls dialog's scrim, which is rendered from
+   * InventoryControl and so sits inside here — it darkened the two panes and nothing
+   * else.
+   *
+   * Filling the viewport and centring the contents avoids the transform entirely, and
+   * keeps it avoided for anything added inside later.
+   */
   .wrapper {
     position: absolute;
-    top: 50%;
-    /* --dev-shift is 0 everywhere except a dev build with the drawer open; see app.css
-       for why the drawer must not overlap the panes. */
-    left: calc(50% + var(--dev-shift) / 2);
-    transform: translate(-50%, -50%);
+    inset: 0;
     display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 20px;
-    align-items: flex-start;
+
+    /* Centres within the space beside the dev drawer. 0 everywhere else — see app.css. */
+    padding-left: var(--dev-shift);
   }
 </style>
