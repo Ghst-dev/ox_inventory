@@ -6,6 +6,8 @@
   import { fetchNui } from '../lib/nui';
   import { locale } from '../lib/state.svelte';
   import { InventoryType, type DragSource } from '../typings';
+  import Icon from '../lib/Icon.svelte';
+  import { Info } from '../lib/icons';
   import UsefulControls from './UsefulControls.svelte';
 
   /**
@@ -112,12 +114,7 @@
   <button class="verb" onclick={() => fetchNui('exit')}>{locale.ui_close || 'Close'}</button>
 
   <button class="help" onclick={() => (helpOpen = true)} aria-label={locale.ui_usefulcontrols}>
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="16" height="16" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336h24V272H216c-13.3 0-24-10.7-24-24s10.7-24 24-24h48c13.3 0 24 10.7 24 24v88h8c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"
-      />
-    </svg>
+    <Icon node={Info} size="16px" />
   </button>
 </div>
 
