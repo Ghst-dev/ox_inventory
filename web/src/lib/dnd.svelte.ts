@@ -22,6 +22,7 @@
  * with useLayoutEffect and a direct style write.
  */
 
+import { play } from './audio';
 import type { DragSource, DropTarget } from '../typings';
 
 /** Movement in px before a press becomes a drag rather than a click. */
@@ -189,6 +190,9 @@ function finishDrag(commit: boolean, release: DropRelease = NO_RELEASE): void {
     // changed under it since the last hit test.
     if (droppable && (!droppable.canDrop || droppable.canDrop(source)))
       droppable.ondrop(source, release);
+    // Refused between the last hit test and the release. Silent otherwise, which reads as
+    // the drag having not registered at all.
+    else play('deny');
   }
 
   endDrag();
@@ -244,6 +248,7 @@ export function draggable(node: HTMLElement, options: DraggableOptions) {
       drag.source = source;
       document.body.classList.add('inv-dragging');
       markAcceptingTargets(true);
+      play('pickup');
     }
 
     movePreview(event.clientX, event.clientY);

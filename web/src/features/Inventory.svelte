@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { fade } from 'svelte/transition';
   import { fetchNui, onNuiEvent } from '../lib/nui';
   import { drag, endDrag } from '../lib/dnd.svelte';
@@ -19,6 +19,7 @@
     ui,
   } from '../lib/ui.svelte';
   import { onUse } from '../lib/actions';
+  import { play } from '../lib/audio';
   import { isSlotWithItem } from '../lib/helpers';
   import type { Inventory } from '../typings';
   import AttachmentPanel from './AttachmentPanel.svelte';
@@ -39,6 +40,34 @@
     'setInventoryVisible',
     (state) => (ui.inventoryOpen = state),
   );
+
+  /**
+   * Sound the inventory opening and closing.
+   *
+   * An effect on the shared flag rather than a call inside each of the four places that
+   * set it — setInventoryVisible, setupInventory, closeInventory and the Escape handler
+   * all change the same thing, and three of them would have been easy to miss. The first
+   * run is skipped so a page load is not announced.
+   */
+  let sounded = false;
+
+  $effect(() => {
+    const open = ui.inventoryOpen;
+
+    /**
+     * `play` is called untracked, and that is not a precaution.
+     *
+     * It reads settings.volume to decide whether to make a sound at all, so calling it
+     * inside the effect body makes the volume a dependency of *this* effect — and
+     * dragging the volume slider then replays the open sound on every step. The harness
+     * caught it: an open blip appeared in a window where the inventory had not opened.
+     * Only the visibility flag belongs in the dependency set.
+     */
+    untrack(() => {
+      if (sounded) play(open ? 'open' : 'close');
+      sounded = true;
+    });
+  });
 
   /** Everything that has to stop when the inventory goes away. */
   function dismissAll() {

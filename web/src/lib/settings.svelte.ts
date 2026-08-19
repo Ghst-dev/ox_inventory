@@ -64,6 +64,8 @@ export interface Settings {
   tooltipDelay: number;
   /** Player override for the OS reduced-motion preference. */
   reduceMotion: boolean;
+  /** 0 to 1. 0 is off, and off means no AudioContext is ever created. */
+  volume: number;
 }
 
 const DEFAULTS: Settings = {
@@ -72,10 +74,12 @@ const DEFAULTS: Settings = {
   scale: 1,
   tooltipDelay: 500,
   reduceMotion: false,
+  volume: 0.5,
 };
 
 export const SCALE_RANGE = { min: 0.8, max: 1.3, step: 0.05 };
 export const DELAY_RANGE = { min: 0, max: 1200, step: 100 };
+export const VOLUME_RANGE = { min: 0, max: 1, step: 0.05 };
 
 /**
  * Read what is stored, keeping only keys that still exist and values of the right shape.
@@ -98,6 +102,7 @@ function load(): Settings {
       scale: clamp(stored.scale, SCALE_RANGE.min, SCALE_RANGE.max, DEFAULTS.scale),
       tooltipDelay: clamp(stored.tooltipDelay, DELAY_RANGE.min, DELAY_RANGE.max, DEFAULTS.tooltipDelay),
       reduceMotion: typeof stored.reduceMotion === 'boolean' ? stored.reduceMotion : DEFAULTS.reduceMotion,
+      volume: clamp(stored.volume, VOLUME_RANGE.min, VOLUME_RANGE.max, DEFAULTS.volume),
     };
   } catch {
     // Private-mode storage, a quota error, or a half-written blob. None of them are worth

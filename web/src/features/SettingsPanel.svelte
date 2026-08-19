@@ -5,6 +5,7 @@
     ACCENTS,
     DELAY_RANGE,
     SCALE_RANGE,
+    VOLUME_RANGE,
     reset,
     settings,
     type HotbarMode,
@@ -31,6 +32,10 @@
     { id: 'flash', key: 'ui_hotbar_flash', fallback: 'On key' },
     { id: 'always', key: 'ui_hotbar_always', fallback: 'Always' },
   ];
+
+  const volumeLabel = $derived(
+    settings.volume === 0 ? locale.ui_off || 'Off' : `${Math.round(settings.volume * 100)}%`,
+  );
 
   const delayLabel = $derived(
     settings.tooltipDelay === 0
@@ -93,6 +98,21 @@
                 {locale[option.key] || option.fallback}
               </button>
             {/each}
+          </div>
+        </div>
+
+        <div class="row">
+          <span class="label">{locale.ui_volume || 'Volume'}</span>
+          <div class="control">
+            <input
+              type="range"
+              min={VOLUME_RANGE.min}
+              max={VOLUME_RANGE.max}
+              step={VOLUME_RANGE.step}
+              bind:value={settings.volume}
+              aria-label={locale.ui_volume || 'Volume'}
+            />
+            <span class="value">{volumeLabel}</span>
           </div>
         </div>
 

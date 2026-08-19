@@ -18,6 +18,7 @@
 
 import type { Inventory, Slot, SlotWithItem, State } from '../typings';
 import { InventoryType } from '../typings';
+import { play } from './audio';
 import { getItemData, getTargetInventory, itemDurability } from './helpers';
 import { fetchNui } from './nui';
 import { items as itemDefs } from './state.svelte';
@@ -83,14 +84,23 @@ async function commit(
   inv.isBusy = true;
   mutate();
 
+  // Sounded with the optimistic mutation, not with the server's answer. The item has
+  // already visibly moved by this line; a click that arrives a round-trip later reads as
+  // a second, unrelated event. The rollback below has its own sound for when it did not.
+  play('drop');
+
   try {
     const response = await fetchNui<boolean | number>(callback, payload);
 
-    if (response === false) rollback();
+    if (response === false) {
+      play('deny');
+      rollback();
+    }
     // swapItems answers with a number when the target is a container: the container's
     // new weight, which belongs to the slot holding it in the other pane.
     else if (typeof response === 'number') setContainerWeight(response);
   } catch {
+    play('deny');
     rollback();
   } finally {
     inv.isBusy = false;
