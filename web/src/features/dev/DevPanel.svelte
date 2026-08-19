@@ -41,6 +41,10 @@
 
   const send = (action: string, data?: unknown) => debugData([{ action, data }], 0);
 
+  // Weapon components are fetched on demand rather than sent in `init`, so the attachment
+  // panel has nothing to name its parts with unless the harness answers this.
+  nuiMocks.getItemData = (name?: unknown) => fixtures.components[name as string];
+
   const openWith = (right: unknown) =>
     send('setupInventory', { leftInventory: fixtures.player, rightInventory: right });
 

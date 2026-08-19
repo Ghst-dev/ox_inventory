@@ -94,3 +94,21 @@ export function closeSplitPrompt() {
   splitPrompt.anchor = null;
   splitPrompt.commit = null;
 }
+
+/**
+ * The weapon whose attachments are being looked at, by slot in the player's inventory.
+ *
+ * A slot number rather than the item, deliberately. Removing a component is answered by
+ * Lua with a bare acknowledgement and the real change arrives later as refreshSlots, so
+ * the panel has to read live from the store to see a part leave. Holding the item itself
+ * would be holding a copy made before the removal.
+ */
+export const weaponPanel = $state<{ slot: number | null }>({ slot: null });
+
+export function openWeaponPanel(slot: number) {
+  weaponPanel.slot = slot;
+}
+
+export function closeWeaponPanel() {
+  weaponPanel.slot = null;
+}

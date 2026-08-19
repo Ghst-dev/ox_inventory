@@ -11,10 +11,17 @@
     type ItemsPayload,
     type RefreshPayload,
   } from '../lib/inventory.svelte';
-  import { closeContextMenu, closeSplitPrompt, closeTooltip, ui } from '../lib/ui.svelte';
+  import {
+    closeContextMenu,
+    closeSplitPrompt,
+    closeTooltip,
+    closeWeaponPanel,
+    ui,
+  } from '../lib/ui.svelte';
   import { onUse } from '../lib/actions';
   import { isSlotWithItem } from '../lib/helpers';
   import type { Inventory } from '../typings';
+  import AttachmentPanel from './AttachmentPanel.svelte';
   import ContextMenu from './ContextMenu.svelte';
   import InventoryControl from './InventoryControl.svelte';
   import InventoryGrid from './InventoryGrid.svelte';
@@ -41,6 +48,7 @@
     closeTooltip();
     closeContextMenu();
     closeSplitPrompt();
+    closeWeaponPanel();
   }
 
   const offClose = onNuiEvent('closeInventory', () => {
@@ -174,6 +182,7 @@
   <Tooltip />
   <ContextMenu />
   <SplitPrompt />
+  <AttachmentPanel />
 {/if}
 
 <style>

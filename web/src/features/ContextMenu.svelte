@@ -3,7 +3,7 @@
   import { fetchNui } from '../lib/nui';
   import { anchored } from '../lib/position';
   import { items as itemDefs, locale } from '../lib/state.svelte';
-  import { closeContextMenu, contextMenu } from '../lib/ui.svelte';
+  import { closeContextMenu, contextMenu, openWeaponPanel } from '../lib/ui.svelte';
   import { setClipboard } from '../utils/setClipboard';
   import { InventoryType } from '../typings';
 
@@ -88,15 +88,23 @@
       });
     }
 
-    const components: string[] = item.metadata?.components ?? [];
+    /**
+     * A weapon gets a panel instead of a submenu.
+     *
+     * Recognised by any of the three things only weapons carry: a serial, a components
+     * array, or an ammo type on the definition. `components` alone would miss a gun with
+     * nothing bolted to it, which is exactly the one whose panel is worth opening to see
+     * that it has empty hands.
+     */
+    const isWeapon =
+      item.metadata?.serial !== undefined ||
+      item.metadata?.components !== undefined ||
+      itemDefs[item.name]?.ammoName !== undefined;
 
-    if (components.length) {
+    if (isWeapon) {
       list.push({
-        label: locale.ui_removeattachments,
-        children: components.map((component) => ({
-          label: itemDefs[component]?.label || component,
-          run: () => fetchNui('removeComponent', { component, slot: item.slot }),
-        })),
+        label: locale.ui_attachments || 'Attachments',
+        run: () => openWeaponPanel(item.slot),
       });
     }
 

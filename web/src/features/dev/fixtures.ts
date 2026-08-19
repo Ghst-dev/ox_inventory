@@ -29,6 +29,8 @@ export const locale: Record<string, string> = {
   ammo_type: 'Ammo type',
   ui_added: 'Added',
   ui_all: 'All',
+  ui_attachments: 'Attachments',
+  ui_attachments_hint: 'Parts can only be removed from the weapon in your hands',
   ui_alt_drag: 'Ask how many to move when the drag is released',
   ui_alt_lmb: 'Fast use an item',
   ui_ammo: 'Ammo',
@@ -44,6 +46,8 @@ export const locale: Record<string, string> = {
   ui_give: 'Give',
   ui_holstered: 'Holstered',
   ui_move: 'Move',
+  ui_no_attachments: 'Nothing fitted',
+  ui_remove: 'Remove',
   ui_remove_ammo: 'Remove ammo',
   ui_removeattachments: 'Remove attachments',
   ui_removed: 'Removed',
@@ -208,4 +212,35 @@ export const container: Inventory = {
   slots: 10,
   maxWeight: 20000,
   items: occupied([{ slot: 1, name: 'money', count: 12500, weight: 0 }]),
+};
+
+/**
+ * Weapon components, answered by the `getItemData` callback rather than sent in `init`.
+ *
+ * A part bolted to a gun lives in metadata, not in a slot, so nothing has ever looked its
+ * definition up — which is why the attachment panel asks for them one at a time. The real
+ * callback returns the whole shared item table, so these carry `type` (the socket) and
+ * `weight`, which the eight-key `init` summary does not have.
+ */
+export const components: Record<string, ItemData> = {
+  at_suppressor: {
+    name: 'at_suppressor',
+    label: 'Suppressor',
+    type: 'muzzle',
+    weight: 280,
+    stack: false,
+    usable: false,
+    close: true,
+    count: 0,
+  },
+  at_flashlight: {
+    name: 'at_flashlight',
+    label: 'Flashlight',
+    type: 'flashlight',
+    weight: 120,
+    stack: false,
+    usable: false,
+    close: true,
+    count: 0,
+  },
 };
