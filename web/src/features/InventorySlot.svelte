@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { drag, draggable, droppable } from '../lib/dnd.svelte';
+  import { drag, draggable, droppable, isDragging } from '../lib/dnd.svelte';
   import { closeTooltip, openContextMenu, openTooltip } from '../lib/ui.svelte';
   import { inv } from '../lib/inventory.svelte';
   import { onBuy, onCraft, onDrop, onUse } from '../lib/actions';
@@ -159,6 +159,7 @@
   class:filled
   class:unavailable={!available}
   class:dimmed
+  class:lifted={isDragging(inventoryType, item.slot)}
   class:hotslot={isHotslot}
   style:background-image={imageUrl ? `url(${imageUrl})` : undefined}
   use:draggable={{ source, canDrag: () => available }}
@@ -262,6 +263,31 @@
        assigning it here would drop the sunken surface and let the game show through the
        one slot you are about to drop onto — see tokens.css. */
     background-color: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
+  }
+
+  /* Hovered and refused. Before this the attribute was never set — a target that said no
+     was reported as no target at all, so releasing over it looked identical to releasing
+     over the gap between two slots. Composited over the surface for the same reason as
+     the accept state above. */
+  .slot:global([data-dnd-deny]) {
+    border-color: var(--color-danger);
+    border-style: dashed;
+    background-color: color-mix(in srgb, var(--color-danger) 12%, var(--surface-sunken));
+    cursor: not-allowed;
+  }
+
+  /* The slot the held item came from. Left as an outline rather than hidden, so the row
+     does not reflow and the gap you are dragging out of stays legible. The count and
+     label are the parts that would otherwise read as a second copy of the item. */
+  .lifted {
+    background-image: none !important;
+    border-style: dashed;
+    opacity: 0.4;
+  }
+
+  .lifted .head,
+  .lifted .foot {
+    visibility: hidden;
   }
 
   .head,

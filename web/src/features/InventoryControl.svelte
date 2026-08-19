@@ -165,7 +165,19 @@
     color: var(--color-white);
   }
 
-  /* Set by the droppable action at runtime, so :global keeps Svelte from pruning it. */
+  /*
+   * Set by the droppable action at runtime, so :global keeps Svelte from pruning it.
+   *
+   * `data-dnd-ok` marks every target that would accept what is being dragged. Slots
+   * ignore it — thirty empty squares lighting up at once is noise — but these two are
+   * exactly the case it exists for: nothing about a button says "you can drop an item on
+   * me", so a player who has not read the controls panel never discovers them.
+   */
+  .verb:global([data-dnd-ok]) {
+    border-color: var(--primary-glow-border);
+    color: var(--color-gray);
+  }
+
   .verb:global([data-dnd-over]) {
     /* Tint over the button's surface, not in place of it — see tokens.css. */
     background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-panel));

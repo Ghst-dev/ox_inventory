@@ -44,9 +44,15 @@ let previewEl: HTMLElement | null = null;
  * for debugging, since drop targets style themselves through the data-dnd-over attribute
  * the action sets.
  */
-export const drag = $state<{ source: DragSource | null; over: string | null }>({
+export const drag = $state<{
+  source: DragSource | null;
+  over: string | null;
+  /** The target under the cursor that has refused this item, if any. */
+  deny: string | null;
+}>({
   source: null,
   over: null,
+  deny: null,
 });
 
 /** True while the given slot is the one being dragged. */
@@ -69,7 +75,15 @@ function movePreview(x: number, y: number): void {
   if (previewEl) previewEl.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
 }
 
-function hitTest(x: number, y: number): string | null {
+/**
+ * What is under the cursor, and whether it would take the item.
+ *
+ * The refused case used to collapse into "nothing here": canDrop returning false made
+ * this return null, so hovering a slot that would reject the drop looked exactly like
+ * hovering the gap between two slots. It is now reported separately so it can be said
+ * out loud — a refusal the player can see is the whole point of testing before release.
+ */
+function hitTest(x: number, y: number): { id: string; allowed: boolean } | null {
   const el = document.elementFromPoint(x, y);
   const target = el?.closest<HTMLElement>('[data-dnd-drop]');
   const id = target?.dataset.dndDrop;
@@ -79,27 +93,50 @@ function hitTest(x: number, y: number): string | null {
   const droppable = droppables.get(id);
   if (!droppable) return null;
 
-  // canDrop rejects before hover, so a target that cannot take this item never lights
-  // up — react-dnd behaved the same way, and it is the only feedback that a move is
-  // disallowed before you commit to it.
-  if (droppable.canDrop && !droppable.canDrop(drag.source)) return null;
-
-  return id;
+  return { id, allowed: !droppable.canDrop || droppable.canDrop(drag.source) };
 }
 
-function setOver(id: string | null): void {
-  if (drag.over === id) return;
+/** Flip one boolean attribute on the node backing a droppable id. */
+function mark(id: string | null, attr: string, on: boolean): void {
+  if (!id) return;
 
-  if (drag.over) {
-    document
-      .querySelector<HTMLElement>(`[data-dnd-drop="${drag.over}"]`)
-      ?.removeAttribute('data-dnd-over');
+  const node = document.querySelector<HTMLElement>(`[data-dnd-drop="${id}"]`);
+  if (on) node?.setAttribute(attr, '');
+  else node?.removeAttribute(attr);
+}
+
+function setOver(hit: { id: string; allowed: boolean } | null): void {
+  const id = hit?.allowed ? hit.id : null;
+  const denied = hit && !hit.allowed ? hit.id : null;
+
+  if (drag.over !== id) {
+    mark(drag.over, 'data-dnd-over', false);
+    drag.over = id;
+    mark(id, 'data-dnd-over', true);
   }
 
-  drag.over = id;
+  if (drag.deny !== denied) {
+    mark(drag.deny, 'data-dnd-deny', false);
+    drag.deny = denied;
+    mark(denied, 'data-dnd-deny', true);
+  }
+}
 
-  if (id) {
-    document.querySelector<HTMLElement>(`[data-dnd-drop="${id}"]`)?.setAttribute('data-dnd-over', '');
+/**
+ * Mark every target that would accept the item being dragged, once, at drag start.
+ *
+ * Deliberately not recomputed on move: canDrop is cheap but there are sixty-odd
+ * droppables on screen and a pointermove fires every frame. The release-time re-check in
+ * finishDrag is what guards correctness if state shifts mid-drag; this is only a hint.
+ *
+ * Every accepting target gets the attribute, but almost nothing styles it — lighting up
+ * thirty empty slots while you drag across your own inventory is noise. It exists for the
+ * targets a player would not otherwise know were targets at all, which is Use and Give.
+ */
+function markAcceptingTargets(on: boolean): void {
+  for (const [id, droppable] of droppables) {
+    const accepts = on && drag.source && (!droppable.canDrop || droppable.canDrop(drag.source));
+    mark(id, 'data-dnd-ok', !!accepts);
   }
 }
 
@@ -115,6 +152,7 @@ export function endDrag(): void {
   if (!drag.source) return;
 
   setOver(null);
+  markAcceptingTargets(false);
   drag.source = null;
   document.body.classList.remove('inv-dragging');
 }
@@ -182,6 +220,7 @@ export function draggable(node: HTMLElement, options: DraggableOptions) {
       pending = false;
       drag.source = source;
       document.body.classList.add('inv-dragging');
+      markAcceptingTargets(true);
     }
 
     movePreview(event.clientX, event.clientY);
@@ -243,7 +282,7 @@ export function droppable(node: HTMLElement, options: Droppable) {
       droppables.set(id, next);
     },
     destroy() {
-      if (drag.over === id) setOver(null);
+      if (drag.over === id || drag.deny === id) setOver(null);
       droppables.delete(id);
       delete node.dataset.dndDrop;
     },
