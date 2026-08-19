@@ -12,6 +12,8 @@
     type RefreshPayload,
   } from '../lib/inventory.svelte';
   import { closeContextMenu, closeTooltip } from '../lib/ui.svelte';
+  import { onUse } from '../lib/actions';
+  import { isSlotWithItem } from '../lib/helpers';
   import type { Inventory } from '../typings';
   import ContextMenu from './ContextMenu.svelte';
   import InventoryControl from './InventoryControl.svelte';
@@ -100,10 +102,50 @@
     fetchNui('exit');
   }
 
+  /**
+   * True while the player is typing into something — the pane search, today.
+   *
+   * Without this, typing "1" into a search field would also use whatever is in the first
+   * hot slot, which for a stack of bandages is a wasted bandage and for a weapon is worse.
+   */
+  const typing = () => {
+    const el = document.activeElement;
+    return (
+      el instanceof HTMLInputElement ||
+      el instanceof HTMLTextAreaElement ||
+      (el instanceof HTMLElement && el.isContentEditable)
+    );
+  };
+
+  /**
+   * Slots 1-5 are keybound out in the world, but not in here — so using a hot slot meant
+   * closing the inventory first, which is the one moment you can see what is in them.
+   */
+  function useHotslot(index: number) {
+    const slot = inv.leftInventory.items[index - 1];
+
+    if (!slot || !isSlotWithItem(slot)) return;
+
+    closeTooltip();
+    closeContextMenu();
+    onUse(slot);
+  }
+
   // Shift halves a stack on drop. Tracked globally because the key may be pressed
   // before the drag starts and released after it ends.
   function onKeyDown(event: KeyboardEvent) {
     if (event.key === 'Shift') inv.shiftPressed = true;
+
+    if (drag.source || typing() || event.ctrlKey || event.altKey || event.metaKey) return;
+
+    // event.code, not event.key: the top-row digits report the same code on every layout,
+    // where key would be an umlaut on some of them.
+    const match = /^Digit([1-5])$/.exec(event.code);
+
+    if (match) {
+      event.preventDefault();
+      useHotslot(Number(match[1]));
+    }
   }
 
   onDestroy(() => {
