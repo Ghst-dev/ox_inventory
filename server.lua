@@ -315,6 +315,81 @@ local function openInventory(source, invType, data, ignoreSecurityChecks)
     }
 end
 
+--[[
+    Open a bag the player is carrying *alongside* whatever else they have open, instead of
+    replacing it.
+
+    WHY THIS IS A SEPARATE CALLBACK AND NOT A FLAG ON openInventory. The whole of
+    ox_inventory's transfer security rests on `playerInventory.open` being a single id the
+    server chose: swapItems resolves the non-player side from it, so a client can never
+    name an inventory. Widening `open` into a set would move that decision to the client
+    for every inventory type at once.
+
+    A container is the one exception that costs nothing, because it is addressed by a
+    **slot in the player's own inventory** rather than by an id. `left.items[slot]` is
+    server-side data; the worst a forged slot can reach is a bag the player is already
+    carrying, which they could open legitimately anyway. So this leaves `open` alone and
+    records the bag in `containerSlot`, which the server already maintained and which
+    swapItems now consults.
+
+    Note what stays impossible: bag to stash directly. The exploit guard at the top of
+    swapItems requires one side of any move to be the player, and that guard is worth more
+    than the convenience. The UI refuses the drag rather than letting the server reject it.
+]]
+lib.callback.register('ox_inventory:openContainer', function(source, slot)
+    if type(slot) ~= 'number' then return end
+
+    local left = Inventory(source)
+
+    -- Only while the window is already up. This is a second pane on an open inventory, not
+    -- a way to reach into a bag from across the map.
+    if not left or not left.open then return end
+
+    local item = left.items[slot]
+
+    if not item?.metadata?.container then return end
+
+    local container = Inventory.GetContainerFromSlot(left, slot)
+
+    if not container then return end
+
+    -- The bag cannot also be the thing on the right; two panes onto one inventory would
+    -- desync the moment either was written to.
+    if container.id == left.open then return end
+
+    left.containerSlot = slot
+    container.openedBy[source] = true
+    container:set('open', true)
+
+    return {
+        id = container.id,
+        label = item.metadata.label or container.label,
+        type = container.type,
+        slots = container.slots,
+        weight = container.weight,
+        maxWeight = container.maxWeight,
+        items = container.items,
+    }
+end)
+
+lib.callback.register('ox_inventory:closeContainer', function(source)
+    local left = Inventory(source)
+
+    if not left or not left.containerSlot then return end
+
+    local item = left.items[left.containerSlot]
+    local container = item?.metadata?.container and Inventory(item.metadata.container)
+
+    if container then
+        container.openedBy[source] = nil
+        container:set('open', false)
+    end
+
+    left.containerSlot = nil
+
+    return true
+end)
+
 ---@param source number
 ---@param invType string
 ---@param data string|number|table

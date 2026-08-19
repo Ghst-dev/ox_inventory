@@ -51,7 +51,18 @@
  * ultrawide.
  */
 :root {
-  --slot-size: clamp(68px, 9.5vh, 112px);
+  /*
+   * Split into a base and a scalar, so somewhere further down the tree can re-derive the
+   * size for itself — a three-pane row does, to fit on a narrow client.
+   *
+   * Note carefully what that requires. A custom property is substituted where it is
+   * *declared*, not where it is read: setting some extra factor on a descendant does
+   * nothing to a --slot-size declared here. The descendant has to declare --slot-size
+   * again, out of these two parts. Hence a base and a scalar rather than one value.
+   */
+  --slot-base: clamp(68px, 9.5vh, 112px);
+  --slot-scale: 1;
+  --slot-size: calc(var(--slot-base) * var(--slot-scale));
   --slot-gap: 6px;
   --grid-cols: 5;
   --grid-rows: 5;

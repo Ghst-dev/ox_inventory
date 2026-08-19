@@ -6,6 +6,7 @@
   import { onBuy, onCraft, onDrop, onUse } from '../lib/actions';
   import {
     canCraftItem,
+    canMoveBetween,
     canPurchaseItem,
     getItemUrl,
     getTargetInventory,
@@ -129,7 +130,11 @@
   const canDrop = (incoming: DragSource) =>
     (incoming.item.slot !== item.slot || incoming.inventory !== inventoryType) &&
     inventoryType !== InventoryType.SHOP &&
-    inventoryType !== InventoryType.CRAFTING;
+    inventoryType !== InventoryType.CRAFTING &&
+    // The server refuses a move where neither side is the player, so with a bag open
+    // beside a stash the drag between them is refused here rather than moving the item
+    // and having it snap back. Feature 03's refusal state is what makes that legible.
+    canMoveBetween(incoming.inventory, inventoryType);
 
   /**
    * The tooltip opens on a delay so that sweeping the cursor across the grid does not

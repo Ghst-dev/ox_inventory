@@ -70,20 +70,45 @@ export const findAvailableSlot = (item: Slot, data: ItemData, slots: Slot[]) => 
  * Which pane is which for a given move. With no target type, the destination is
  * whichever pane the source is not — that is the ctrl+click quick-move.
  */
+/**
+ * Which pane a wire type refers to.
+ *
+ * `container` is the only ambiguous one, and only in appearance: a bag opened while the
+ * inventory was already up becomes the third pane, and a bag opened from a closed
+ * inventory becomes the right-hand one. The client never creates both at once, so
+ * preferring the third pane when it exists is exact rather than a guess.
+ */
+export const paneOf = (state: State, type: Inventory['type']): Inventory => {
+  if (type === InventoryType.PLAYER) return state.leftInventory;
+  if (type === InventoryType.CONTAINER && state.containerInventory) return state.containerInventory;
+
+  return state.rightInventory;
+};
+
 export const getTargetInventory = (
   state: State,
   sourceType: Inventory['type'],
   targetType?: Inventory['type'],
 ): { sourceInventory: Inventory; targetInventory: Inventory } => ({
-  sourceInventory: sourceType === InventoryType.PLAYER ? state.leftInventory : state.rightInventory,
+  sourceInventory: paneOf(state, sourceType),
   targetInventory: targetType
-    ? targetType === InventoryType.PLAYER
-      ? state.leftInventory
-      : state.rightInventory
+    ? paneOf(state, targetType)
     : sourceType === InventoryType.PLAYER
       ? state.rightInventory
       : state.leftInventory,
 });
+
+/**
+ * The server's own guard, mirrored so a refused move is refused visibly instead of moving
+ * and snapping back.
+ *
+ * `ox_inventory:swapItems` logs an exploit and drops any move where the two sides are of
+ * different types and neither is the player. That is what stops a client naming two
+ * foreign inventories at once, and it is worth more than the convenience of dragging
+ * straight from a bag into a stash — so the drag says no, and the item goes via you.
+ */
+export const canMoveBetween = (fromType: Inventory['type'], toType: Inventory['type']) =>
+  fromType === toType || fromType === InventoryType.PLAYER || toType === InventoryType.PLAYER;
 
 /**
  * Durability as a percentage.

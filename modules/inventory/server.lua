@@ -37,6 +37,27 @@ function OxInventory:closeInventory(noEvent)
         inv:set('open', false)
     end
 
+    --[[
+        A container opened *alongside* the main pane is released here too.
+
+        `self.open` is cleared below and that is what the rest of this file keys off, but a
+        container reached through containerSlot is not in `self.open` — so without this its
+        openedBy entry outlives the window, and syncSlotsWithClients keeps pushing slot
+        updates to a player who walked away from the bag ten minutes ago.
+
+        Looked up rather than fetched through GetContainerFromSlot: that helper creates the
+        inventory when it is missing, and creating one in order to close it is absurd.
+    ]]
+    if self.containerSlot then
+        local item = self.items[self.containerSlot]
+        local container = item?.metadata?.container and Inventory(item.metadata.container)
+
+        if container then
+            container.openedBy[self.id] = nil
+            container:set('open', false)
+        end
+    end
+
     self.open = false
     self.currentShop = nil
     self.containerSlot = nil
@@ -1698,8 +1719,33 @@ lib.callback.register('ox_inventory:swapItems', function(source, data)
 
 	if not playerInventory or not playerInventory.open then return end
 
-	local toInventory = (data.toType == 'player' and playerInventory) or Inventory(playerInventory.open)
-	local fromInventory = (data.fromType == 'player' and playerInventory) or Inventory(playerInventory.open)
+	--[[
+		Which inventory each side of the move refers to.
+
+		THIS IS THE SECURITY BOUNDARY. The client says which *type* is on each side; it has
+		never been able to say which *inventory*, and it still cannot. Everything but a
+		container resolves to `playerInventory.open`, the single inventory the server chose
+		to show them. A container resolves through `containerSlot` — a slot in the player's
+		own inventory, set by the server when it opened the bag — so the worst a forged
+		`fromType = 'container'` can do is address a bag the player is already carrying.
+
+		The guard at the top of this callback still requires one side to be the player, so
+		only ever one of these two is a foreign inventory.
+	]]
+	local function sideFor(invType)
+		if invType == 'player' then return playerInventory end
+
+		if invType == 'container' and playerInventory.containerSlot then
+			local container = Inventory.GetContainerFromSlot(playerInventory, playerInventory.containerSlot)
+
+			if container then return container end
+		end
+
+		return Inventory(playerInventory.open)
+	end
+
+	local toInventory = sideFor(data.toType)
+	local fromInventory = sideFor(data.fromType)
 
 	if not fromInventory or not toInventory then
 		playerInventory:closeInventory()

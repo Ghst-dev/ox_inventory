@@ -7,6 +7,7 @@
     inv,
     refreshSlots,
     setAdditionalMetadata,
+    setupContainer,
     setupInventory,
     type ItemsPayload,
     type RefreshPayload,
@@ -132,6 +133,8 @@
 
   // `false` rather than null on the wire: Lua cannot put a nil in a table and have it
   // survive the trip, so empty-handed is sent as false and normalised here.
+  const offContainer = onNuiEvent<Inventory | false>('setupContainer', setupContainer);
+
   const offEquipped = onNuiEvent<number | false>(
     'setEquipped',
     (slot) => (ui.equippedSlot = slot === false ? null : slot),
@@ -204,6 +207,7 @@
     offSetup();
     offRefresh();
     offMetadata();
+    offContainer();
     offEquipped();
   });
 </script>
@@ -211,7 +215,13 @@
 <svelte:window onkeyup={onKeyUp} onkeydown={onKeyDown} />
 
 {#if ui.inventoryOpen}
-  <div class="wrapper" transition:fade={{ duration: 150 }}>
+  <!-- The bag sits left of the player's own inventory rather than beyond the stash: it is
+       part of you, and keeping it on that side leaves the you-and-them relationship across
+       the control column exactly where players already look for it. -->
+  <div class="wrapper" class:wide={!!inv.containerInventory} transition:fade={{ duration: 150 }}>
+    {#if inv.containerInventory}
+      <InventoryGrid inventory={inv.containerInventory} container />
+    {/if}
     <InventoryGrid inventory={inv.leftInventory} />
     <InventoryControl />
     <InventoryGrid inventory={inv.rightInventory} />
@@ -250,5 +260,41 @@
 
     /* Centres within the space beside the dev drawer. 0 everywhere else — see app.css. */
     padding-left: var(--dev-shift);
+  }
+
+  /*
+   * Three panes and the control column need more room than two.
+   *
+   * Only the gaps close up. Scaling the row down with a transform is the obvious next
+   * step and is exactly what the note above forbids: a transformed element becomes the
+   * containing block for its `position: fixed` descendants, and the settings and controls
+   * dialogs are rendered from InventoryControl, which is inside here. Their scrims would
+   * cover the panes and nothing else, which is the bug that comment was written about.
+   *
+   * On a client too narrow for three panes, the slot-size control in the settings panel
+   * is the deliberate way to buy the space back.
+   */
+  .wrapper.wide {
+    gap: 10px;
+  }
+
+  /*
+   * Below this the three panes, the control column and the gaps no longer fit, and
+   * flexbox resolves that by squashing the control column — the amount box and the three
+   * verbs are the first things to lose their width, which is the worst possible answer.
+   *
+   * Shrinking the slots instead keeps every column intact, and it is done by declaring
+   * --slot-size here rather than by setting some factor that :root's declaration reads:
+   * a custom property is substituted where it is declared, so a factor set on this
+   * element would never reach a --slot-size declared on :root.
+   *
+   * Not a transform, either. A transformed element becomes the containing block for its
+   * `position: fixed` descendants, and the settings and controls dialogs are rendered
+   * from inside here — see the note on .wrapper above.
+   */
+  @media (max-width: 1500px) {
+    .wrapper.wide {
+      --slot-size: calc(var(--slot-base) * var(--slot-scale) * 0.78);
+    }
   }
 </style>

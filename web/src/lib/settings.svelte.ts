@@ -148,9 +148,11 @@ export function applySettings(): void {
     style.setProperty('--primary-glow-border', hexToRgba(chosen.primary, 0.25));
     style.setProperty('--action-glow', hexToRgba(chosen.action, 0.35));
 
-    // Multiplied rather than replaced: the clamp is what stops a slot being a postage
-    // stamp at 4K or overflowing at 720p, and a fixed px value would throw that away.
-    style.setProperty('--slot-size', `calc(clamp(68px, 9.5vh, 112px) * ${settings.scale})`);
+    // Only the scalar. app.css owns the formula, because a three-pane row multiplies the
+    // same base again for its own reasons and a --slot-size written whole from here could
+    // not be re-derived further down the tree — a custom property is substituted where it
+    // is declared, not where it is read.
+    style.setProperty('--slot-scale', String(settings.scale));
 
     document.documentElement.toggleAttribute('data-reduce-motion', settings.reduceMotion);
 

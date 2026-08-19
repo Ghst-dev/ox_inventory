@@ -130,6 +130,9 @@
   .control {
     display: flex;
     flex-direction: column;
+    /* Never the column that gives. With three panes flexbox would otherwise take this
+       one down to half its width before touching anything else. */
+    flex: none;
     gap: 8px;
     width: 150px;
     padding-top: 34px;

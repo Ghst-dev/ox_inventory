@@ -97,6 +97,49 @@ local defaultInventory = {
 
 local currentInventory = defaultInventory
 
+--[[
+    A bag from the player's own inventory, opened *alongside* the main pane rather than
+    instead of it — so walking up to a stash with a backpack on no longer means choosing
+    which of the two you can see.
+
+    Held separately from `currentInventory` on purpose. That variable is the single foreign
+    inventory the server decided to show you, and the server's transfer security depends on
+    it staying single: swapItems resolves the non-player side from `playerInventory.open`,
+    which is why a client can never name an inventory. A container is the one thing that can
+    safely sit beside it, because it is addressed by a slot in your own inventory rather
+    than by an id — see the openContainer callback in server.lua.
+]]
+local currentContainer
+
+---@param slot number a slot in the player's own inventory holding a container item
+function client.openContainer(slot)
+    -- Only as a second pane on an open window. With the inventory shut, using a bag still
+    -- opens it the old way, as the right-hand pane of a freshly opened inventory.
+    if not invOpen then return end
+
+    -- Using the bag that is already open closes it, the same way re-opening a stash does.
+    if currentContainer and currentContainer.slot == slot then
+        return client.closeContainer()
+    end
+
+    local container = lib.callback.await('ox_inventory:openContainer', false, slot)
+
+    if not container then return end
+
+    currentContainer = { slot = slot, id = container.id }
+
+    SendNUIMessage({ action = 'setupContainer', data = container })
+end
+
+function client.closeContainer()
+    if not currentContainer then return end
+
+    currentContainer = nil
+
+    lib.callback.await('ox_inventory:closeContainer', false)
+    SendNUIMessage({ action = 'setupContainer', data = false })
+end
+
 local function closeTrunk()
 	if currentInventory.type == 'trunk' then
 		local coords = GetEntityCoords(playerPed, true)
@@ -513,6 +556,10 @@ local function useSlot(slot, noAnim)
 		data.slot = slot
 
 		if item.metadata.container then
+			-- Open, and it becomes a third panel; closed, it opens the inventory with the
+			-- bag on the right exactly as before.
+			if invOpen then return client.openContainer(item.slot) end
+
 			return client.openInventory('container', item.slot)
 		elseif data.client then
 			if invOpen and data.close then client.closeInventory() end
@@ -899,6 +946,8 @@ function client.closeInventory()
 		SetNuiFocusKeepInput(false)
 		Utils.blurOut()
 		Utils.previewOut()
+		-- Server-side release happens in OxInventory:closeInventory; this is the local half.
+		currentContainer = nil
 		closeTrunk()
 		SendNUIMessage({ action = 'closeInventory' })
 		SetInterval(client.interval, 200)
@@ -1828,6 +1877,11 @@ RegisterNUICallback('giveItem', function(data, cb)
     if entity and IsPedAPlayer(entity) and IsEntityVisible(entity) and #(GetEntityCoords(playerPed, true) - GetEntityCoords(entity, true)) < 3.0 then
         return giveItemToTarget(GetPlayerServerId(NetworkGetPlayerIndexFromPed(entity)), data.slot, data.count)
     end
+end)
+
+RegisterNUICallback('closeContainer', function(_, cb)
+    cb(1)
+    client.closeContainer()
 end)
 
 RegisterNUICallback('useButton', function(data, cb)

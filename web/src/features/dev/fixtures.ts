@@ -270,3 +270,13 @@ export const components: Record<string, ItemData> = {
     count: 0,
   },
 };
+
+/**
+ * What is in the bag. Sparse and out of order like everything Lua sends, so the third
+ * pane goes through the same dense-array expansion the other two do.
+ */
+export const backpack: SlotWithItem[] = occupied([
+  { slot: 2, name: 'bandage', count: 3, weight: 120 },
+  { slot: 5, name: 'water', count: 2, weight: 200 },
+  { slot: 8, name: 'scrapmetal', count: 12, weight: 1200 },
+]);

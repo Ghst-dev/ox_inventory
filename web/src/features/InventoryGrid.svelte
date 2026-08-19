@@ -2,6 +2,7 @@
   import { categoryOf, categoryRank } from '../lib/categories';
   import { getTotalWeight, isSlotWithItem } from '../lib/helpers';
   import { inv } from '../lib/inventory.svelte';
+  import { fetchNui } from '../lib/nui';
   import { items as itemDefs, locale } from '../lib/state.svelte';
   import { InventoryType, type Inventory, type Slot } from '../typings';
   import { tidy } from '../lib/tidy';
@@ -10,7 +11,17 @@
   import InventorySlot from './InventorySlot.svelte';
   import WeightBar from './WeightBar.svelte';
 
-  let { inventory }: { inventory: Inventory } = $props();
+  let {
+    inventory,
+    container = false,
+  }: {
+    inventory: Inventory;
+    /**
+     * This is the bag pane, open alongside the other two rather than in place of one — so
+     * it is the only pane that can be dismissed on its own, and needs a way to say so.
+     */
+    container?: boolean;
+  } = $props();
 
   /**
    * A pane of slots.
@@ -222,6 +233,16 @@
   <header>
     <p class="title">{inventory.label ?? ''}</p>
 
+    {#if container}
+      <button
+        class="tidy dismiss"
+        onclick={() => fetchNui('closeContainer')}
+        aria-label={locale.ui_close || 'Close'}
+      >
+        <Icon node={X} size="14px" />
+      </button>
+    {/if}
+
     {#if tidyable}
       <button
         class="tidy"
@@ -367,6 +388,12 @@
 
   .tidy:disabled {
     opacity: 0.4;
+  }
+
+  /* Same shape as the tidy button beside it, but this one shuts the pane rather than
+     rearranging it, so it takes the danger colour on hover instead of the accent. */
+  .dismiss:hover:not(:disabled) {
+    color: var(--color-danger);
   }
 
   .weight {

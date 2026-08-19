@@ -28,6 +28,7 @@ const emptyInventory = (): Inventory => ({ id: '', type: '', slots: 0, maxWeight
 export const inv = $state<State>({
   leftInventory: emptyInventory(),
   rightInventory: emptyInventory(),
+  containerInventory: null,
   additionalMetadata: [],
   itemAmount: 0,
   shiftPressed: false,
@@ -38,7 +39,7 @@ export const inv = $state<State>({
 /* Snapshot and rollback                                                       */
 /* -------------------------------------------------------------------------- */
 
-let history: { left: Inventory; right: Inventory } | null = null;
+let history: { left: Inventory; right: Inventory; container: Inventory | null } | null = null;
 
 /**
  * $state.snapshot is the counterpart of RTK's `current()` — it unwraps the proxies into
@@ -49,6 +50,11 @@ function snapshot(): void {
   history = {
     left: $state.snapshot(inv.leftInventory) as Inventory,
     right: $state.snapshot(inv.rightInventory) as Inventory,
+    // Snapshotted like the other two, or a refused move out of a bag would roll back
+    // everywhere except the pane it came from.
+    container: inv.containerInventory
+      ? ($state.snapshot(inv.containerInventory) as Inventory)
+      : null,
   };
 }
 
@@ -57,6 +63,7 @@ function rollback(): void {
 
   inv.leftInventory = history.left;
   inv.rightInventory = history.right;
+  inv.containerInventory = history.container;
   history = null;
 }
 
@@ -109,8 +116,12 @@ async function commit(
 }
 
 function setContainerWeight(weight: number): void {
+  // swapItems answers with a number when the *open* container is written to, which is now
+  // either pane; the bag item itself is always in the player's own inventory.
+  const openContainerId = inv.containerInventory?.id ?? inv.rightInventory.id;
+
   const container = inv.leftInventory.items.find(
-    (item) => item.metadata?.container === inv.rightInventory.id,
+    (item) => item.metadata?.container === openContainerId,
   );
 
   if (container) container.weight = weight;
@@ -161,6 +172,15 @@ export function setupInventory(data: {
   inv.isBusy = false;
 }
 
+/**
+ * Open or close the container pane.
+ *
+ * `false` from Lua rather than nil, because a nil in a table does not survive the trip.
+ */
+export function setupContainer(data: Inventory | false): void {
+  inv.containerInventory = data ? buildInventory(data) : null;
+}
+
 export type ItemsPayload = { item: Slot; inventory?: string };
 
 export interface RefreshPayload {
@@ -171,9 +191,10 @@ export interface RefreshPayload {
 }
 
 /** Which pane an id refers to, or null when it is neither of the two open ones. */
-function paneFor(inventoryId: string): 'leftInventory' | 'rightInventory' | null {
+function paneFor(inventoryId: string): 'leftInventory' | 'rightInventory' | 'containerInventory' | null {
   if (inventoryId === inv.leftInventory.id) return 'leftInventory';
   if (inventoryId === inv.rightInventory.id) return 'rightInventory';
+  if (inventoryId === inv.containerInventory?.id) return 'containerInventory';
   return null;
 }
 
@@ -185,12 +206,23 @@ export function refreshSlots(payload: RefreshPayload): void {
     for (const data of list) {
       if (!data) continue;
 
-      // An absent `inventory` means the player's own — the left pane. Anything else
-      // names the right pane, whatever it happens to be.
+      /**
+       * Which pane the update belongs to.
+       *
+       * Lua sends `player` (or nothing) for the player's own, and an inventory *id* for
+       * anything else. Before the container pane existed, "not player" could only mean the
+       * right-hand pane, so that is what this assumed — and with a bag open that
+       * assumption puts the bag's slots into the stash. Matching the id is exact.
+       *
+       * It still falls back to the right pane for an id matching neither, which is the old
+       * behaviour and covers any path that sends something unexpected.
+       */
       const target =
-        data.inventory && data.inventory !== InventoryType.PLAYER
-          ? inv.rightInventory
-          : inv.leftInventory;
+        !data.inventory || data.inventory === InventoryType.PLAYER
+          ? inv.leftInventory
+          : data.inventory === inv.containerInventory?.id
+            ? inv.containerInventory
+            : inv.rightInventory;
 
       data.item.durability = itemDurability(data.item.metadata, curTime);
       target.items[data.item.slot - 1] = data.item;
@@ -209,16 +241,20 @@ export function refreshSlots(payload: RefreshPayload): void {
   // SetMaxWeight while an inventory is open.
   if (payload.weightData) {
     const pane = paneFor(payload.weightData.inventoryId);
-    if (pane) inv[pane].maxWeight = payload.weightData.maxWeight;
+    const target = pane && inv[pane];
+
+    if (target) target.maxWeight = payload.weightData.maxWeight;
   }
 
   // A slot count change has to rebuild the pane, since the dense array is sized by it.
   if (payload.slotsData) {
     const pane = paneFor(payload.slotsData.inventoryId);
 
-    if (pane) {
-      inv[pane].slots = payload.slotsData.slots;
-      inv[pane] = buildInventory($state.snapshot(inv[pane]) as Inventory);
+    const target = pane && inv[pane];
+
+    if (pane && target) {
+      target.slots = payload.slotsData.slots;
+      inv[pane] = buildInventory($state.snapshot(target) as Inventory);
     }
   }
 }

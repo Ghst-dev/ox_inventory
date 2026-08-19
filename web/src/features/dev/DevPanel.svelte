@@ -129,6 +129,19 @@
       'Elsewhere',
       [
         ['Hotbar', () => send('toggleHotbar')],
+        [
+          'Backpack',
+          () =>
+            send('setupContainer', {
+              id: 'container-bag1',
+              type: 'container',
+              label: 'Backpack',
+              slots: 10,
+              maxWeight: 12000,
+              items: fixtures.backpack,
+            }),
+        ],
+        ['Close backpack', () => send('setupContainer', false)],
         ['Notify added', notifyAdd],
         ['Notify removed', notifyRemove],
       ],
