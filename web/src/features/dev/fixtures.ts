@@ -34,6 +34,17 @@ export const locale: Record<string, string> = {
   ui_alt_drag: 'Ask how many to move when the drag is released',
   ui_alt_lmb: 'Fast use an item',
   ui_ammo: 'Ammo',
+  ui_cat_ammo: 'Ammo',
+  ui_cat_component: 'Parts',
+  ui_cat_document: 'Documents',
+  ui_cat_drug: 'Narcotics',
+  ui_cat_food: 'Food',
+  ui_cat_material: 'Materials',
+  ui_cat_medical: 'Medical',
+  ui_cat_misc: 'Other',
+  ui_cat_tool: 'Tools',
+  ui_cat_valuable: 'Valuables',
+  ui_cat_weapon: 'Weapons',
   ui_close: 'Close',
   ui_components: 'Components',
   ui_copy: 'Copy serial number',
@@ -62,6 +73,10 @@ export const locale: Record<string, string> = {
   ui_usefulcontrols: 'Useful Controls',
 };
 
+/**
+ * `category` defaults to 'misc' the same way client.lua's resolution does, so a fixture
+ * that forgets one behaves exactly like an item in data/items.lua that has none.
+ */
 const item = (name: string, label: string, extra: Partial<ItemData> = {}): ItemData => ({
   name,
   label,
@@ -69,25 +84,27 @@ const item = (name: string, label: string, extra: Partial<ItemData> = {}): ItemD
   usable: true,
   close: true,
   count: 0,
+  category: 'misc',
   ...extra,
 });
 
 export const items: Record<string, ItemData> = {
-  water: item('water', 'Water'),
-  burger: item('burger', 'Burger'),
-  cola: item('cola', 'eCola'),
-  lockpick: item('lockpick', 'Lockpick'),
-  medikit: item('medikit', 'Medikit'),
-  bandage: item('bandage', 'Bandage'),
-  radio: item('radio', 'Radio', { stack: false }),
+  water: item('water', 'Water', { category: 'food' }),
+  burger: item('burger', 'Burger', { category: 'food' }),
+  cola: item('cola', 'eCola', { category: 'food' }),
+  lockpick: item('lockpick', 'Lockpick', { category: 'tool' }),
+  medikit: item('medikit', 'Medikit', { category: 'medical' }),
+  bandage: item('bandage', 'Bandage', { category: 'medical' }),
+  radio: item('radio', 'Radio', { stack: false, category: 'tool' }),
   garbage: item('garbage', 'Garbage'),
-  scrapmetal: item('scrapmetal', 'Scrap Metal'),
-  money: item('money', 'Cash', { usable: false }),
-  'ammo-9': item('ammo-9', '9mm Rounds', { usable: false }),
-  at_suppressor: item('at_suppressor', 'Suppressor', { stack: false, usable: false }),
-  at_flashlight: item('at_flashlight', 'Flashlight', { stack: false, usable: false }),
+  scrapmetal: item('scrapmetal', 'Scrap Metal', { category: 'material' }),
+  money: item('money', 'Cash', { usable: false, category: 'valuable' }),
+  'ammo-9': item('ammo-9', '9mm Rounds', { usable: false, category: 'ammo' }),
+  at_suppressor: item('at_suppressor', 'Suppressor', { stack: false, usable: false, category: 'component' }),
+  at_flashlight: item('at_flashlight', 'Flashlight', { stack: false, usable: false, category: 'component' }),
   WEAPON_PISTOL: item('WEAPON_PISTOL', 'Pistol', {
     stack: false,
+    category: 'weapon',
     ammoName: 'ammo-9',
     description: 'A **standard** sidearm.\n\nHolds 12 rounds.',
     // Grouped and ungrouped together: the context menu has to collapse the grouped ones

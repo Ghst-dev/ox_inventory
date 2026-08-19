@@ -25,9 +25,66 @@
 
   let page = $state(0);
   let query = $state('');
+  let chosen = $state<string | null>(null);
 
   const searchable = $derived(inventory.slots > SEARCH_THRESHOLD);
   const needle = $derived(query.trim().toLowerCase());
+
+  /**
+   * The order chips appear in, when they appear.
+   *
+   * Fixed rather than alphabetical or by count, so a chip does not move because the pane's
+   * contents changed — a row whose buttons swap places between glances is unusable. Names
+   * not listed here (an item categorised by hand into something new) sort after these,
+   * alphabetically, rather than being dropped.
+   */
+  const CATEGORY_ORDER = [
+    'weapon',
+    'ammo',
+    'component',
+    'medical',
+    'food',
+    'drug',
+    'tool',
+    'material',
+    'valuable',
+    'document',
+    'misc',
+  ];
+
+  const categoryOf = (slot: Slot) =>
+    isSlotWithItem(slot) ? (itemDefs[slot.name]?.category ?? 'misc') : null;
+
+  /**
+   * Chips are built from what is actually in the pane, not from the full category list.
+   *
+   * That is what keeps the row short: eleven categories exist, a real inventory holds
+   * three or four. It also means a chip never offers a filter that would empty the pane.
+   */
+  const present = $derived.by(() => {
+    const counts = new Map<string, number>();
+
+    for (const slot of inventory.items) {
+      const category = categoryOf(slot);
+      if (category) counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+
+    const rank = (name: string) => {
+      const index = CATEGORY_ORDER.indexOf(name);
+      return index === -1 ? CATEGORY_ORDER.length : index;
+    };
+
+    return [...counts.entries()].sort(
+      ([a], [b]) => rank(a) - rank(b) || a.localeCompare(b),
+    );
+  });
+
+  // One chip is not a filter, it is a label — and the same threshold as the search keeps a
+  // six-slot crafting bench free of both.
+  const chipped = $derived(inventory.slots > SEARCH_THRESHOLD && present.length > 1);
+
+  const chipLabel = (name: string) =>
+    locale[`ui_cat_${name}`] || name.charAt(0).toUpperCase() + name.slice(1);
 
   /**
    * A CATALOGUE PANE MAY HIDE; A PLACE MAY ONLY DIM.
@@ -49,10 +106,19 @@
   const slotText = (slot: Slot) =>
     `${slot.metadata?.label ?? ''} ${itemDefs[slot.name!]?.label ?? ''} ${slot.name ?? ''}`.toLowerCase();
 
+  /**
+   * Both filters at once, and both have to pass.
+   *
+   * Chips narrow to a kind of thing and the field narrows to a name, so the useful
+   * combination is "the medical thing whose name has 'ban' in it" rather than either
+   * replacing the other.
+   */
   const matches = (slot: Slot) =>
-    !needle || (isSlotWithItem(slot) && slotText(slot).includes(needle));
+    (!needle || (isSlotWithItem(slot) && slotText(slot).includes(needle))) &&
+    (!chosen || categoryOf(slot) === chosen);
 
-  const rows = $derived(catalogue && needle ? inventory.items.filter(matches) : inventory.items);
+  const filtering = $derived(!!needle || !!chosen);
+  const rows = $derived(catalogue && filtering ? inventory.items.filter(matches) : inventory.items);
 
   let visible = $derived(rows.slice(0, (page + 1) * PAGE_SIZE));
   const hasMore = $derived(visible.length < rows.length);
@@ -61,7 +127,7 @@
   // argument, which isSlotWithItem reads as its `strict` flag — so every slot after the
   // first would be tested strictly.
   const filled = $derived(inventory.items.some((slot) => isSlotWithItem(slot)));
-  const hits = $derived(needle ? inventory.items.filter(matches).length : -1);
+  const hits = $derived(filtering ? inventory.items.filter(matches).length : -1);
 
   // Switching panes (opening a different stash) has to start from the top again, and the
   // previous pane's search must not silently narrow the new one.
@@ -70,6 +136,17 @@
     inventory.type;
     page = 0;
     query = '';
+    chosen = null;
+  });
+
+  /**
+   * Drop a chosen chip once the pane no longer contains that category.
+   *
+   * Taking your last bandage out of a stash while 'Medical' is selected would otherwise
+   * leave the pane filtered to nothing by a button that is no longer on screen.
+   */
+  $effect(() => {
+    if (chosen && !present.some(([name]) => name === chosen)) chosen = null;
   });
 
   /**
@@ -181,6 +258,21 @@
     </div>
   {/if}
 
+  {#if chipped}
+    <div class="chips">
+      {#each present as [name, count] (name)}
+        <button
+          class="chip"
+          class:on={chosen === name}
+          aria-pressed={chosen === name}
+          onclick={() => (chosen = chosen === name ? null : name)}
+        >
+          {chipLabel(name)}<span class="tally">{count}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
   <!-- isBusy blocks interaction while a move is in flight, so a second drag cannot race
        the first. The store also refuses concurrent operations outright; this is the
        visible half of that — `stalled` adds the part the player can actually see, but
@@ -195,7 +287,7 @@
         {item}
         inventoryType={inventory.type}
         inventoryGroups={inventory.groups}
-        dimmed={!catalogue && !!needle && !matches(item)}
+        dimmed={!catalogue && filtering && !matches(item)}
       />
     {/each}
 
@@ -208,7 +300,7 @@
          identical without this. -->
     {#if !filled}
       <p class="empty">{emptyLabel}</p>
-    {:else if needle && hits === 0}
+    {:else if filtering && hits === 0}
       <p class="empty">{locale.ui_no_results || 'Nothing matches'}</p>
     {/if}
   </div>
@@ -360,6 +452,54 @@
 
   .search .clear:hover {
     color: var(--color-white);
+  }
+
+  /* ---- Category chips ---------------------------------------------------- */
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    color: var(--color-dim);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+
+  .chip:hover {
+    border-color: var(--primary-glow-border);
+    color: var(--color-white);
+  }
+
+  .chip.on {
+    /* Tinted over the sunken surface rather than painted onto it, per tokens.css. */
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .tally {
+    font-family: var(--font-mono);
+    letter-spacing: 0;
+    color: var(--color-dim);
+  }
+
+  .chip.on .tally {
+    color: var(--color-primary);
   }
 
   /* ---- Empty and stalled ------------------------------------------------- */

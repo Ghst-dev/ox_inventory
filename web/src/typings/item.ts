@@ -22,6 +22,16 @@ export type ItemData = {
   ammoName?: string;
   image?: string;
   /**
+   * Which filter chip this item sits under, resolved in Lua (`client.lua`) rather than
+   * derived here — an ordinary item declares it in `data/items.lua`, and anything from
+   * `data/weapons.lua` is named by the flags shared.lua sets. Always present in game,
+   * optional in the type because a definition fetched by `getItemData` is the raw shared
+   * table and does not carry it.
+   */
+  category?: string;
+  /** Everything else this fork adds to an item definition, forwarded whole. */
+  ghst?: Record<string, unknown>;
+  /**
    * Fields that only reach the UI through the `getItemData` callback, which answers with
    * the whole shared item table rather than the eight-key summary `init` sends.
    *

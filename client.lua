@@ -1232,6 +1232,18 @@ RegisterNetEvent('ox_inventory:setPlayerInventory', function(currentDrops, inven
 			end
 		end
 
+		--[[
+			`category` is the UI's filter chips, resolved here rather than guessed there.
+
+			Ordinary items declare it in data/items.lua under a `ghst` table; anything
+			folded in from data/weapons.lua declares nothing and is named by the flags
+			modules/items/shared.lua already sets on it. Everything left is 'misc' rather
+			than nil, so the UI never has to decide what an uncategorised item is.
+
+			`ghst` itself is forwarded whole. This payload is a hand-written whitelist —
+			nothing else in an item definition reaches the UI — so a namespaced table is
+			what stops the next field we add from needing another line here.
+		]]
 		ItemData[v.name] = {
 			label = v.label,
 			stack = v.stack,
@@ -1240,7 +1252,13 @@ RegisterNetEvent('ox_inventory:setPlayerInventory', function(currentDrops, inven
 			description = v.description,
 			buttons = buttons,
 			ammoName = v.ammoname,
-			image = v.client?.image
+			image = v.client?.image,
+			ghst = v.ghst,
+			category = v.ghst?.category
+				or (v.weapon and 'weapon')
+				or (v.ammo and 'ammo')
+				or ((v.component or v.tint) and 'component')
+				or 'misc'
 		}
 	end
 
