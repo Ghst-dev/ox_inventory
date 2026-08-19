@@ -8,6 +8,8 @@
   "ui_empty_player": "You are carrying nothing",
   "ui_empty_shop": "Nothing for sale here",
   "ui_empty_crafting": "Nothing can be made here",
+  "ui_heavy": "Heavy",
+  "ui_overloaded": "Overloaded",
   "ui_drop": "Drop",
   "ui_removeattachments": "Remove attachments",
   "ui_copy": "Copy serial number",

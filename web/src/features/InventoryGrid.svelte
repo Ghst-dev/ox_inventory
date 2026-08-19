@@ -98,6 +98,27 @@
     inventory.maxWeight !== undefined ? Math.floor(getTotalWeight(inventory.items) * 1000) / 1000 : 0,
   );
 
+  const load = $derived(inventory.maxWeight ? (weight / inventory.maxWeight) * 100 : 0);
+
+  /**
+   * How full, in words.
+   *
+   * The bar has changed tone past 90% since it was written, but nothing outside the bar
+   * reacted — so the only warning a player got was six pixels of colour they were not
+   * looking at, and the first they knew of being full was a pickup that quietly failed.
+   *
+   * Thresholds match WeightBar's so the readout and the bar never disagree.
+   */
+  const strain = $derived(load > 90 ? 'over' : load > 75 ? 'heavy' : null);
+
+  const strainLabel = $derived(
+    strain === 'over'
+      ? locale.ui_overloaded || 'Overloaded'
+      : strain === 'heavy'
+        ? locale.ui_heavy || 'Heavy'
+        : '',
+  );
+
   /** What an empty pane should say, which is not the same sentence in every pane. */
   const emptyLabel = $derived.by(() => {
     switch (inventory.type) {
@@ -132,7 +153,10 @@
   <header>
     <p class="title">{inventory.label ?? ''}</p>
     {#if inventory.maxWeight}
-      <p class="weight">{format(weight)} / {format(inventory.maxWeight)} kg</p>
+      <p class="weight" class:heavy={strain === 'heavy'} class:over={strain === 'over'}>
+        {#if strainLabel}<span class="strain">{strainLabel}</span>{/if}
+        {format(weight)} / {format(inventory.maxWeight)} kg
+      </p>
     {/if}
   </header>
 
@@ -232,8 +256,28 @@
 
   .weight {
     flex: none;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
     font-size: var(--text-meta);
     color: var(--color-dim);
+    transition: color var(--dur-base) var(--ease-out);
+  }
+
+  .weight.heavy {
+    color: var(--color-warn);
+  }
+
+  .weight.over {
+    color: var(--color-danger-text);
+  }
+
+  /* The word carries the weight — literally the point of it — so it is the emphasised
+     half and the numbers stay quiet behind it. */
+  .strain {
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    font-weight: var(--font-weight-semibold);
   }
 
   /* Height comes from .slot-grid in app.css: a fixed five rows, so both panes match
