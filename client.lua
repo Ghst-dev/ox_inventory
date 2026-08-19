@@ -1377,7 +1377,28 @@ RegisterNetEvent('ox_inventory:setPlayerInventory', function(currentDrops, inven
 
 	TriggerEvent('ox_inventory:updateInventory', PlayerData.inventory)
 
+	---Last slot announced to the UI, so the message is only sent when it actually changes.
+	local lastEquippedSlot
+
 	client.interval = SetInterval(function()
+        --[[
+            Tell the UI which slot is in the player's hands.
+
+            Watched here rather than sent from wherever the weapon changes. `currentWeapon`
+            is assigned from a dozen paths — Disarm on death, on cuffing, on giving the gun
+            away, on the weapon wheel, on respawn, on using a slot — and adding a send to
+            each of them is how one of them ends up missed and the marker sticks to a
+            weapon the player is no longer holding. Watching the value catches every path
+            by construction. The cost is up to one tick of latency on a cosmetic marker,
+            and a comparison on an integer every 100ms.
+        ]]
+        local equippedSlot = currentWeapon?.slot
+
+        if equippedSlot ~= lastEquippedSlot then
+            lastEquippedSlot = equippedSlot
+            SendNUIMessage({ action = 'setEquipped', data = equippedSlot or false })
+        end
+
         local canSteal = canOpenTarget(playerPed)
 
         if canSteal ~= client.player:get('canSteal') then

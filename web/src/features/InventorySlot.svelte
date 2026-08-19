@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { drag, draggable, droppable, isDragging, type DropRelease } from '../lib/dnd.svelte';
-  import { closeTooltip, openContextMenu, openSplitPrompt, openTooltip } from '../lib/ui.svelte';
+  import { closeTooltip, openContextMenu, openSplitPrompt, openTooltip, ui } from '../lib/ui.svelte';
   import { inv } from '../lib/inventory.svelte';
   import { onBuy, onCraft, onDrop, onUse } from '../lib/actions';
   import {
@@ -72,6 +72,11 @@
   // Marked whether or not the slot holds anything: the pin is about the square, and an
   // empty pinned slot is a space being kept free on purpose.
   const pinned = $derived(isPinned(inventoryType, item.slot));
+
+  // The weapon actually in the player's hands. Only their own pane can hold it.
+  const equipped = $derived(
+    inventoryType === InventoryType.PLAYER && ui.equippedSlot === item.slot && filled,
+  );
 
   const source = (): DragSource | null => {
     // A shop slot is draggable even with a zero count so the purchase can be refused
@@ -201,6 +206,7 @@
   class:lifted={isDragging(inventoryType, item.slot)}
   class:hotslot={isHotslot}
   class:pinned
+  class:equipped
   style:background-image={imageUrl ? `url(${imageUrl})` : undefined}
   use:draggable={{ source, canDrag: () => available }}
   use:droppable={{ canDrop, ondrop: accept }}
@@ -276,6 +282,15 @@
      slightly raised rather than as another cell in the grid. */
   .hotslot {
     background-color: var(--surface-raised);
+  }
+
+  /*
+   * In hand right now. A left edge rather than a full border: the slot already uses its
+   * border for drag states, and a marker that competes with those is a marker that hides
+   * the one telling you whether a drop will be accepted.
+   */
+  .equipped {
+    box-shadow: inset 3px 0 0 var(--color-primary);
   }
 
   /*

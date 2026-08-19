@@ -130,6 +130,13 @@
     setAdditionalMetadata,
   );
 
+  // `false` rather than null on the wire: Lua cannot put a nil in a table and have it
+  // survive the trip, so empty-handed is sent as false and normalised here.
+  const offEquipped = onNuiEvent<number | false>(
+    'setEquipped',
+    (slot) => (ui.equippedSlot = slot === false ? null : slot),
+  );
+
   /**
    * Escape closes the inventory. Handled on keyup rather than keydown to match the
    * original — and it must tell Lua, or the game keeps NUI focus and the player is
@@ -197,6 +204,7 @@
     offSetup();
     offRefresh();
     offMetadata();
+    offEquipped();
   });
 </script>
 

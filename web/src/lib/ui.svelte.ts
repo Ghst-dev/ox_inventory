@@ -15,7 +15,17 @@ import type { Inventory, SlotWithItem } from '../typings';
  * pane that already shows them. Duplicating the four NUI listeners in a second component
  * would leave two answers to one question, so the answer moved here instead.
  */
-export const ui = $state<{ inventoryOpen: boolean }>({ inventoryOpen: false });
+export const ui = $state<{ inventoryOpen: boolean; equippedSlot: number | null }>({
+  inventoryOpen: false,
+  /**
+   * The player-inventory slot currently in their hands, or null for empty-handed.
+   *
+   * Announced by client.lua's main interval rather than by whatever changed the weapon,
+   * because `currentWeapon` is assigned from a dozen paths and one of them would have been
+   * missed. Costs up to a tick of latency on a marker that is purely informational.
+   */
+  equippedSlot: null,
+});
 
 export const tooltip = $state<{
   item: SlotWithItem | null;

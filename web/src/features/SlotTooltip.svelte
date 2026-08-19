@@ -3,6 +3,8 @@
   import { inv } from '../lib/inventory.svelte';
   import { renderMarkdown } from '../lib/markdown';
   import { items as itemDefs, locale } from '../lib/state.svelte';
+  import { ui } from '../lib/ui.svelte';
+  import { InventoryType } from '../typings';
   import type { Inventory, SlotWithItem } from '../typings';
 
   let { item, inventoryType }: { item: SlotWithItem; inventoryType: Inventory['type'] } = $props();
@@ -17,6 +19,50 @@
   );
 
   const components = $derived<string[]>(item.metadata?.components ?? []);
+
+  /* ---- The weapon in hand ------------------------------------------------- */
+
+  const isEquipped = $derived(
+    inventoryType === InventoryType.PLAYER && ui.equippedSlot === item.slot,
+  );
+
+  const equippedSlot = $derived(
+    ui.equippedSlot !== null ? inv.leftInventory.items[ui.equippedSlot - 1] : undefined,
+  );
+
+  /**
+   * Compare against the weapon in hand, when this is a *different* weapon.
+   *
+   * WHAT THIS CANNOT TELL YOU. ox_inventory's data/weapons.lua carries a label, a weight,
+   * a wear rate and an ammo name — no damage, range, fire rate or accuracy. So this
+   * compares condition and load, not performance, and says so by only showing the three
+   * things it actually knows. Real ballistics would mean reading GTA natives per weapon,
+   * which is a different feature.
+   *
+   * The ammo line is the one most worth having: whether the gun you are looking at takes
+   * the rounds already in your pockets.
+   */
+  const comparison = $derived.by(() => {
+    if (isEquipped || !equippedSlot?.name || !itemData?.ammoName) return null;
+
+    const other = itemDefs[equippedSlot.name];
+    if (!other?.ammoName) return null;
+
+    return {
+      label: equippedSlot.metadata?.label || other.label || equippedSlot.name,
+      durability: {
+        mine: item.durability,
+        theirs: equippedSlot.durability,
+      },
+      weight: { mine: item.weight, theirs: equippedSlot.weight },
+      sameAmmo: other.ammoName === itemData.ammoName,
+      ammoLabel: itemDefs[itemData.ammoName]?.label || itemData.ammoName,
+    };
+  });
+
+  /** A signed figure, because the sign is the whole message. */
+  const signed = (value: number, digits = 0) =>
+    `${value > 0 ? '+' : ''}${value.toFixed(digits)}`;
 
   /**
    * Server-declared extra metadata rows, registered through the `displayMetadata`
@@ -40,6 +86,8 @@
     <p class="name">{item.metadata?.label || itemData?.label || item.name}</p>
     {#if inventoryType === 'crafting'}
       <p class="meta">{(item.duration ?? 3000) / 1000}s</p>
+    {:else if isEquipped}
+      <p class="meta equipped">{locale.ui_equipped || 'Equipped'}</p>
     {:else if item.metadata?.type}
       <p class="meta">{item.metadata.type}</p>
     {/if}
@@ -91,6 +139,36 @@
           <dd>{item.metadata?.[entry.metadata]}</dd>
         {/each}
       </dl>
+
+      {#if comparison}
+        <div class="versus">
+          <p class="against">{locale.ui_vs || 'Against'} {comparison.label}</p>
+
+          <dl>
+            {#if comparison.durability.mine !== undefined && comparison.durability.theirs !== undefined}
+              <dt>{locale.ui_durability}</dt>
+              <dd class:better={comparison.durability.mine > comparison.durability.theirs}
+                  class:worse={comparison.durability.mine < comparison.durability.theirs}>
+                {signed(comparison.durability.mine - comparison.durability.theirs)}
+              </dd>
+            {/if}
+
+            {#if comparison.weight.mine !== undefined && comparison.weight.theirs !== undefined}
+              <dt>{locale.ui_weight || 'Weight'}</dt>
+              <!-- Lighter is better, so the tone is inverted against durability's. -->
+              <dd class:better={comparison.weight.mine < comparison.weight.theirs}
+                  class:worse={comparison.weight.mine > comparison.weight.theirs}>
+                {signed((comparison.weight.mine - comparison.weight.theirs) / 1000, 2)}kg
+              </dd>
+            {/if}
+
+            <dt>{locale.ammo_type}</dt>
+            <dd class:better={comparison.sameAmmo}>
+              {comparison.sameAmmo ? locale.ui_same_ammo || 'Same' : comparison.ammoLabel}
+            </dd>
+          </dl>
+        </div>
+      {/if}
     {/if}
   {/if}
 </div>
@@ -115,6 +193,40 @@
     padding-bottom: 6px;
     margin-bottom: 6px;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  .meta.equipped {
+    color: var(--color-primary);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    font-size: var(--text-meta);
+  }
+
+  /* Set apart from the item's own figures above it: these are differences, and reading a
+     delta as an absolute is the one mistake this block can cause. */
+  .versus {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .against {
+    margin: 0 0 4px;
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--color-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .versus dd.better {
+    color: var(--color-success);
+  }
+
+  .versus dd.worse {
+    color: var(--color-danger-text);
   }
 
   .name {

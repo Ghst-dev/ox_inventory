@@ -65,6 +65,7 @@ export const locale: Record<string, string> = {
   ui_removeattachments: 'Remove attachments',
   ui_removed: 'Removed',
   ui_rmb: 'Open item context menu',
+  ui_same_ammo: 'Same',
   ui_serial: 'Serial number',
   ui_split: 'Split',
   ui_volume: 'Volume',
@@ -74,6 +75,8 @@ export const locale: Record<string, string> = {
   ui_tint: 'Tint',
   ui_unpin: 'Unpin slot',
   ui_use: 'Use',
+  ui_vs: 'Against',
+  ui_weight: 'Weight',
   ui_usefulcontrols: 'Useful Controls',
 };
 
