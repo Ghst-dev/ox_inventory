@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { categoryOf, categoryRank } from '../lib/categories';
   import { getTotalWeight, isSlotWithItem } from '../lib/helpers';
   import { inv } from '../lib/inventory.svelte';
   import { items as itemDefs, locale } from '../lib/state.svelte';
   import { InventoryType, type Inventory, type Slot } from '../typings';
+  import { tidy } from '../lib/tidy';
   import Icon from '../lib/Icon.svelte';
-  import { Search, X } from '../lib/icons';
+  import { ArrowDownAZ, Search, X } from '../lib/icons';
   import InventorySlot from './InventorySlot.svelte';
   import WeightBar from './WeightBar.svelte';
 
@@ -31,31 +33,6 @@
   const needle = $derived(query.trim().toLowerCase());
 
   /**
-   * The order chips appear in, when they appear.
-   *
-   * Fixed rather than alphabetical or by count, so a chip does not move because the pane's
-   * contents changed — a row whose buttons swap places between glances is unusable. Names
-   * not listed here (an item categorised by hand into something new) sort after these,
-   * alphabetically, rather than being dropped.
-   */
-  const CATEGORY_ORDER = [
-    'weapon',
-    'ammo',
-    'component',
-    'medical',
-    'food',
-    'drug',
-    'tool',
-    'material',
-    'valuable',
-    'document',
-    'misc',
-  ];
-
-  const categoryOf = (slot: Slot) =>
-    isSlotWithItem(slot) ? (itemDefs[slot.name]?.category ?? 'misc') : null;
-
-  /**
    * Chips are built from what is actually in the pane, not from the full category list.
    *
    * That is what keeps the row short: eleven categories exist, a real inventory holds
@@ -69,13 +46,8 @@
       if (category) counts.set(category, (counts.get(category) ?? 0) + 1);
     }
 
-    const rank = (name: string) => {
-      const index = CATEGORY_ORDER.indexOf(name);
-      return index === -1 ? CATEGORY_ORDER.length : index;
-    };
-
     return [...counts.entries()].sort(
-      ([a], [b]) => rank(a) - rank(b) || a.localeCompare(b),
+      ([a], [b]) => categoryRank(a) - categoryRank(b) || a.localeCompare(b),
     );
   });
 
@@ -101,6 +73,26 @@
   const catalogue = $derived(
     inventory.type === InventoryType.SHOP || inventory.type === InventoryType.CRAFTING,
   );
+
+  /**
+   * Tidying is only meaningful where slots are yours to rearrange. A shop's layout is the
+   * shopkeeper's, and a crafting bench's is the recipe list.
+   */
+  const tidyable = $derived(!catalogue && inventory.slots > 0);
+
+  let tidying = $state(false);
+
+  async function runTidy() {
+    if (tidying || inv.isBusy) return;
+
+    tidying = true;
+
+    try {
+      await tidy(inventory.type);
+    } finally {
+      tidying = false;
+    }
+  }
 
   /** Label as the slot itself renders it, so searching matches what the player reads. */
   const slotText = (slot: Slot) =>
@@ -229,6 +221,19 @@
 <section class="pane">
   <header>
     <p class="title">{inventory.label ?? ''}</p>
+
+    {#if tidyable}
+      <button
+        class="tidy"
+        onclick={runTidy}
+        disabled={tidying || inv.isBusy}
+        title={locale.ui_tidy_hint || 'Stack and sort. Slots 1-5 stay where they are.'}
+        aria-label={locale.ui_tidy || 'Tidy'}
+      >
+        <Icon node={ArrowDownAZ} size="14px" />
+      </button>
+    {/if}
+
     {#if inventory.maxWeight}
       <p class="weight" class:heavy={strain === 'heavy'} class:over={strain === 'over'}>
         {#if strainLabel}<span class="strain">{strainLabel}</span>{/if}
@@ -279,8 +284,8 @@
        only once a round-trip is slow enough to be worth mentioning. -->
   <div
     class="grid slot-grid"
-    class:stalled
-    style:pointer-events={inv.isBusy ? 'none' : 'auto'}
+    class:stalled={stalled || tidying}
+    style:pointer-events={inv.isBusy || tidying ? 'none' : 'auto'}
   >
     {#each visible as item (item.slot)}
       <InventorySlot
@@ -344,6 +349,24 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .tidy {
+    flex: none;
+    display: flex;
+    padding: 3px;
+    margin-left: auto;
+    border-radius: var(--radius-sm);
+    color: var(--color-dim);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+
+  .tidy:hover:not(:disabled) {
+    color: var(--color-primary);
+  }
+
+  .tidy:disabled {
+    opacity: 0.4;
   }
 
   .weight {

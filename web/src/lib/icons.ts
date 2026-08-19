@@ -8,6 +8,7 @@
  * Add an import when a component needs a new one. See lib/Icon.svelte for the renderer.
  */
 
+import ArrowDownAZ from 'lucide/dist/esm/icons/arrow-down-a-z.mjs';
 import Info from 'lucide/dist/esm/icons/info.mjs';
 import Search from 'lucide/dist/esm/icons/search.mjs';
 import Settings from 'lucide/dist/esm/icons/settings.mjs';
@@ -20,4 +21,4 @@ import X from 'lucide/dist/esm/icons/x.mjs';
  */
 export type IconNode = [tag: string, attrs: Record<string, string | number>][];
 
-export { Info, Search, Settings, X };
+export { ArrowDownAZ, Info, Search, Settings, X };

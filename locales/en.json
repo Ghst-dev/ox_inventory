@@ -36,6 +36,8 @@
   "ui_cat_valuable": "Valuables",
   "ui_cat_document": "Documents",
   "ui_cat_misc": "Other",
+  "ui_tidy": "Tidy",
+  "ui_tidy_hint": "Stack and sort. Slots 1-5 stay where they are.",
   "ui_volume": "Volume",
   "ui_off": "Off",
   "ui_hotbar": "Hotbar",

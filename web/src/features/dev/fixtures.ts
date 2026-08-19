@@ -68,6 +68,8 @@ export const locale: Record<string, string> = {
   ui_split: 'Split',
   ui_volume: 'Volume',
   ui_shift_drag: 'Split item quantity into half',
+  ui_tidy: 'Tidy',
+  ui_tidy_hint: 'Stack and sort. Slots 1-5 stay where they are.',
   ui_tint: 'Tint',
   ui_use: 'Use',
   ui_usefulcontrols: 'Useful Controls',

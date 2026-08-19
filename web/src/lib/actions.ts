@@ -33,7 +33,11 @@ import { items as itemDefs } from './state.svelte';
  * a count read at drop time, and a refreshSlots can land between the release and the
  * confirmation.
  */
-export function onDrop(source: DragSource, target?: DropTarget, amount?: number): void {
+export function onDrop(
+  source: DragSource,
+  target?: DropTarget,
+  amount?: number,
+): void | Promise<void> {
   const { sourceInventory, targetInventory } = getTargetInventory(
     inv,
     source.inventory,
@@ -95,7 +99,9 @@ export function onDrop(source: DragSource, target?: DropTarget, amount?: number)
     count,
   };
 
-  validateMove(payload, () => {
+  // Returned, not just called: tidy() awaits each move before deciding the next one, and
+  // the store refuses concurrent operations anyway.
+  return validateMove(payload, () => {
     if (!isSlotWithItem(targetSlot, true)) return moveSlots(data);
 
     if (sourceData.stack && canStack(sourceSlot, targetSlot))
