@@ -7,6 +7,7 @@
     SCALE_RANGE,
     reset,
     settings,
+    type HotbarMode,
   } from '../lib/settings.svelte';
   import Icon from '../lib/Icon.svelte';
   import { X } from '../lib/icons';
@@ -25,6 +26,11 @@
     event.stopPropagation();
     open = false;
   }
+
+  const HOTBAR_OPTIONS: Array<{ id: HotbarMode; key: string; fallback: string }> = [
+    { id: 'flash', key: 'ui_hotbar_flash', fallback: 'On key' },
+    { id: 'always', key: 'ui_hotbar_always', fallback: 'Always' },
+  ];
 
   const delayLabel = $derived(
     settings.tooltipDelay === 0
@@ -70,6 +76,22 @@
                 aria-pressed={settings.accent === option.id}
                 onclick={() => (settings.accent = option.id)}
               ></button>
+            {/each}
+          </div>
+        </div>
+
+        <div class="row">
+          <span class="label">{locale.ui_hotbar || 'Hotbar'}</span>
+          <div class="segment">
+            {#each HOTBAR_OPTIONS as option (option.id)}
+              <button
+                class="option"
+                class:on={settings.hotbar === option.id}
+                aria-pressed={settings.hotbar === option.id}
+                onclick={() => (settings.hotbar = option.id)}
+              >
+                {locale[option.key] || option.fallback}
+              </button>
             {/each}
           </div>
         </div>
@@ -226,6 +248,35 @@
     display: flex;
     align-items: center;
     gap: 10px;
+  }
+
+  .segment {
+    display: flex;
+    background: var(--surface-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .option {
+    padding: 4px 10px;
+    color: var(--color-dim);
+    font-size: var(--text-meta);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+
+  .option:hover {
+    color: var(--color-white);
+  }
+
+  .option.on {
+    /* Tinted over the sunken surface rather than painted onto it, per tokens.css. */
+    background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
+    color: var(--color-primary);
   }
 
   .value {

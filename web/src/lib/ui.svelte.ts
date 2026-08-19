@@ -1,9 +1,21 @@
 /**
- * Transient UI state: what the tooltip is describing, and what the context menu is
- * open on. Both were Redux slices; neither needs anything a rune cannot do.
+ * Transient UI state: whether the inventory is on screen, what the tooltip is describing,
+ * and what the context menu is open on. The latter two were Redux slices; neither needs
+ * anything a rune cannot do.
  */
 
 import type { Inventory, SlotWithItem } from '../typings';
+
+/**
+ * Whether the two panes are on screen.
+ *
+ * This lived as local state inside Inventory.svelte until the hotbar needed it. A
+ * persistent hotbar has to stand down while the inventory is open — it sits at the
+ * bottom of the same viewport and would draw a second copy of slots 1-5 underneath the
+ * pane that already shows them. Duplicating the four NUI listeners in a second component
+ * would leave two answers to one question, so the answer moved here instead.
+ */
+export const ui = $state<{ inventoryOpen: boolean }>({ inventoryOpen: false });
 
 export const tooltip = $state<{
   item: SlotWithItem | null;

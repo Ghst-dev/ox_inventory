@@ -45,8 +45,19 @@ export const ACCENTS: Accent[] = [
   { id: 'plain', label: 'Plain', primary: '#d4d4d4', action: '#ffffff' },
 ];
 
+/**
+ * When the hotbar is on screen.
+ *
+ * `flash` is the stock behaviour — three seconds on the hotbar key, then gone. `always`
+ * leaves it up for the whole session, which is what most survival games do and what makes
+ * the change-pulse below worth having.
+ */
+export const HOTBAR_MODES = ['flash', 'always'] as const;
+export type HotbarMode = (typeof HOTBAR_MODES)[number];
+
 export interface Settings {
   accent: string;
+  hotbar: HotbarMode;
   /** Multiplier on --slot-size, so the vh clamp that keeps it sane at 720p and 4K survives. */
   scale: number;
   /** Milliseconds of hover before a tooltip opens. 0 means immediately. */
@@ -57,6 +68,7 @@ export interface Settings {
 
 const DEFAULTS: Settings = {
   accent: 'ghst',
+  hotbar: 'flash',
   scale: 1,
   tooltipDelay: 500,
   reduceMotion: false,
@@ -82,6 +94,7 @@ function load(): Settings {
 
     return {
       accent: ACCENTS.some((a) => a.id === stored.accent) ? stored.accent! : DEFAULTS.accent,
+      hotbar: HOTBAR_MODES.includes(stored.hotbar!) ? stored.hotbar! : DEFAULTS.hotbar,
       scale: clamp(stored.scale, SCALE_RANGE.min, SCALE_RANGE.max, DEFAULTS.scale),
       tooltipDelay: clamp(stored.tooltipDelay, DELAY_RANGE.min, DELAY_RANGE.max, DEFAULTS.tooltipDelay),
       reduceMotion: typeof stored.reduceMotion === 'boolean' ? stored.reduceMotion : DEFAULTS.reduceMotion,

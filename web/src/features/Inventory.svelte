@@ -11,7 +11,7 @@
     type ItemsPayload,
     type RefreshPayload,
   } from '../lib/inventory.svelte';
-  import { closeContextMenu, closeTooltip } from '../lib/ui.svelte';
+  import { closeContextMenu, closeTooltip, ui } from '../lib/ui.svelte';
   import { onUse } from '../lib/actions';
   import { isSlotWithItem } from '../lib/helpers';
   import type { Inventory } from '../typings';
@@ -27,9 +27,10 @@
    * (amount box, Use/Give/Close), the hotbar, tooltips and the context menu are phase 3.
    */
 
-  let visible = $state(false);
-
-  const offVisible = onNuiEvent<boolean>('setInventoryVisible', (state) => (visible = state));
+  const offVisible = onNuiEvent<boolean>(
+    'setInventoryVisible',
+    (state) => (ui.inventoryOpen = state),
+  );
 
   /** Everything that has to stop when the inventory goes away. */
   function dismissAll() {
@@ -41,7 +42,7 @@
   }
 
   const offClose = onNuiEvent('closeInventory', () => {
-    visible = false;
+    ui.inventoryOpen = false;
     dismissAll();
   });
 
@@ -49,7 +50,7 @@
     'setupInventory',
     (data) => {
       setupInventory(data);
-      visible = true;
+      ui.inventoryOpen = true;
     },
   );
 
@@ -97,7 +98,7 @@
 
     if (event.code !== 'Escape') return;
 
-    visible = false;
+    ui.inventoryOpen = false;
     dismissAll();
     fetchNui('exit');
   }
@@ -159,7 +160,7 @@
 
 <svelte:window onkeyup={onKeyUp} onkeydown={onKeyDown} />
 
-{#if visible}
+{#if ui.inventoryOpen}
   <div class="wrapper" transition:fade={{ duration: 150 }}>
     <InventoryGrid inventory={inv.leftInventory} />
     <InventoryControl />
