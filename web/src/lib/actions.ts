@@ -27,8 +27,13 @@ import { items as itemDefs } from './state.svelte';
  *
  * The no-target call is the ctrl+click quick-move: the destination is chosen by
  * findAvailableSlot, which prefers an existing stack over the first empty slot.
+ *
+ * `amount` is the split prompt's answer and overrides both the shift-halving and the
+ * amount box. It is still clamped to what is in the slot: the prompt was opened against
+ * a count read at drop time, and a refreshSlots can land between the release and the
+ * confirmation.
  */
-export function onDrop(source: DragSource, target?: DropTarget): void {
+export function onDrop(source: DragSource, target?: DropTarget, amount?: number): void {
   const { sourceInventory, targetInventory } = getTargetInventory(
     inv,
     source.inventory,
@@ -66,8 +71,9 @@ export function onDrop(source: DragSource, target?: DropTarget): void {
 
   // Shift halves the stack; otherwise the amount box wins, clamped to what is there.
   // Shops are excluded from the halving because their stock is not the player's to split.
-  const count =
-    inv.shiftPressed && sourceSlot.count > 1 && sourceInventory.type !== 'shop'
+  const count = amount
+    ? Math.min(amount, sourceSlot.count)
+    : inv.shiftPressed && sourceSlot.count > 1 && sourceInventory.type !== 'shop'
       ? Math.floor(sourceSlot.count / 2)
       : inv.itemAmount === 0 || inv.itemAmount > sourceSlot.count
         ? sourceSlot.count
@@ -104,7 +110,7 @@ export function onDrop(source: DragSource, target?: DropTarget): void {
  * a bare amount of 0 means one item rather than the whole stack — you rarely intend to
  * buy a shop's entire supply by dragging.
  */
-export function onBuy(source: DragSource, target: DropTarget): void {
+export function onBuy(source: DragSource, target: DropTarget, amount?: number): void {
   const sourceSlot = inv.rightInventory.items[source.item.slot - 1];
 
   if (!isSlotWithItem(sourceSlot)) throw new Error(`Item ${source.item.slot} name === undefined`);
@@ -116,8 +122,9 @@ export function onBuy(source: DragSource, target: DropTarget): void {
   const targetSlot = inv.leftInventory.items[target.item.slot - 1];
   if (targetSlot === undefined) return console.error('Target slot undefined');
 
-  const count =
-    inv.itemAmount !== 0
+  const count = amount
+    ? Math.min(amount, sourceSlot.count)
+    : inv.itemAmount !== 0
       ? sourceSlot.count && inv.itemAmount > sourceSlot.count
         ? sourceSlot.count
         : inv.itemAmount
@@ -155,7 +162,7 @@ export function onBuy(source: DragSource, target: DropTarget): void {
  * then loops server-side, running a progress circle per iteration. There is deliberately
  * no optimistic mutation — the result arrives as refreshSlots when each one completes.
  */
-export function onCraft(source: DragSource, target: DropTarget): void {
+export function onCraft(source: DragSource, target: DropTarget, amount?: number): void {
   const sourceSlot = inv.rightInventory.items[source.item.slot - 1];
 
   if (!isSlotWithItem(sourceSlot)) throw new Error(`Item ${source.item.slot} name === undefined`);
@@ -173,7 +180,7 @@ export function onCraft(source: DragSource, target: DropTarget): void {
       toSlot: targetSlot.slot,
       fromType: inv.rightInventory.type,
       toType: inv.leftInventory.type,
-      count: inv.itemAmount === 0 ? 1 : inv.itemAmount,
+      count: amount ?? (inv.itemAmount === 0 ? 1 : inv.itemAmount),
     },
     () => {},
   );

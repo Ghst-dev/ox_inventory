@@ -56,3 +56,41 @@ export function closeContextMenu() {
   contextMenu.item = null;
   contextMenu.anchor = null;
 }
+
+/**
+ * The split prompt: "how many of these do you want to move?"
+ *
+ * Opened by releasing a drag with Alt held. The alternatives already in the UI are the
+ * amount box, which has to be filled in *before* the drag and applies to every move
+ * until you clear it, and shift-drag, which only ever gives you half — so moving 7 of a
+ * stack of 40 meant typing 7, dragging, then remembering to clear the box.
+ *
+ * `commit` is supplied by whoever opened the prompt rather than resolved here. The rules
+ * for what a drop means differ per pane (a shop purchase is not a move, and a crafting
+ * bench counts iterations rather than items), and all three already live in actions.ts.
+ * Storing the closure keeps that knowledge out of this file.
+ */
+export const splitPrompt = $state<{
+  anchor: DOMRect | null;
+  label: string;
+  max: number;
+  commit: ((count: number) => void) | null;
+}>({ anchor: null, label: '', max: 0, commit: null });
+
+export function openSplitPrompt(
+  label: string,
+  max: number,
+  x: number,
+  y: number,
+  commit: (count: number) => void,
+) {
+  splitPrompt.label = label;
+  splitPrompt.max = max;
+  splitPrompt.anchor = new DOMRect(x, y, 0, 0);
+  splitPrompt.commit = commit;
+}
+
+export function closeSplitPrompt() {
+  splitPrompt.anchor = null;
+  splitPrompt.commit = null;
+}

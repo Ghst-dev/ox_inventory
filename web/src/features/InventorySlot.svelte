@@ -1,10 +1,16 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { drag, draggable, droppable, isDragging } from '../lib/dnd.svelte';
-  import { closeTooltip, openContextMenu, openTooltip } from '../lib/ui.svelte';
+  import { drag, draggable, droppable, isDragging, type DropRelease } from '../lib/dnd.svelte';
+  import { closeTooltip, openContextMenu, openSplitPrompt, openTooltip } from '../lib/ui.svelte';
   import { inv } from '../lib/inventory.svelte';
   import { onBuy, onCraft, onDrop, onUse } from '../lib/actions';
-  import { canCraftItem, canPurchaseItem, getItemUrl, isSlotWithItem } from '../lib/helpers';
+  import {
+    canCraftItem,
+    canPurchaseItem,
+    getItemUrl,
+    getTargetInventory,
+    isSlotWithItem,
+  } from '../lib/helpers';
   import { items as itemDefs, locale } from '../lib/state.svelte';
   import { settings } from '../lib/settings.svelte';
   import { InventoryType, type DragSource, type Inventory, type Slot, type SlotWithItem } from '../typings';
@@ -72,15 +78,40 @@
     };
   };
 
-  function accept(incoming: DragSource) {
+  function route(incoming: DragSource, amount?: number) {
+    const target = { inventory: inventoryType, item: { slot: item.slot } };
+
     switch (incoming.inventory) {
       case InventoryType.SHOP:
-        return onBuy(incoming, { inventory: inventoryType, item: { slot: item.slot } });
+        return onBuy(incoming, target, amount);
       case InventoryType.CRAFTING:
-        return onCraft(incoming, { inventory: inventoryType, item: { slot: item.slot } });
+        return onCraft(incoming, target, amount);
       default:
-        return onDrop(incoming, { inventory: inventoryType, item: { slot: item.slot } });
+        return onDrop(incoming, target, amount);
     }
+  }
+
+  function accept(incoming: DragSource, release: DropRelease) {
+    /**
+     * Alt on release asks how many instead of moving everything.
+     *
+     * Skipped for a crafting bench: `count` there is iterations of a recipe, not a
+     * quantity sitting in a slot, so there is no honest ceiling to put on the slider.
+     * Skipped for a single item for the obvious reason.
+     */
+    const { sourceInventory } = getTargetInventory(inv, incoming.inventory, inventoryType);
+    const from = sourceInventory.items[incoming.item.slot - 1];
+    const stack = from?.count ?? 0;
+
+    if (release.alt && stack > 1 && incoming.inventory !== InventoryType.CRAFTING) {
+      const name = from.metadata?.label || itemDefs[from.name!]?.label || from.name || '';
+
+      return openSplitPrompt(name, stack, release.x, release.y, (amount) =>
+        route(incoming, amount),
+      );
+    }
+
+    return route(incoming);
   }
 
   const canDrop = (incoming: DragSource) =>

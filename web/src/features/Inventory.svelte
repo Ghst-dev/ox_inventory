@@ -11,13 +11,14 @@
     type ItemsPayload,
     type RefreshPayload,
   } from '../lib/inventory.svelte';
-  import { closeContextMenu, closeTooltip, ui } from '../lib/ui.svelte';
+  import { closeContextMenu, closeSplitPrompt, closeTooltip, ui } from '../lib/ui.svelte';
   import { onUse } from '../lib/actions';
   import { isSlotWithItem } from '../lib/helpers';
   import type { Inventory } from '../typings';
   import ContextMenu from './ContextMenu.svelte';
   import InventoryControl from './InventoryControl.svelte';
   import InventoryGrid from './InventoryGrid.svelte';
+  import SplitPrompt from './SplitPrompt.svelte';
   import Tooltip from './Tooltip.svelte';
 
   /**
@@ -39,6 +40,7 @@
     endDrag();
     closeTooltip();
     closeContextMenu();
+    closeSplitPrompt();
   }
 
   const offClose = onNuiEvent('closeInventory', () => {
@@ -171,6 +173,7 @@
        rather than inside a pane that would clip them. -->
   <Tooltip />
   <ContextMenu />
+  <SplitPrompt />
 {/if}
 
 <style>

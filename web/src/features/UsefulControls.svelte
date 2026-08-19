@@ -15,6 +15,7 @@
     { keys: 'ALT + LMB', description: locale.ui_alt_lmb },
     { keys: 'CTRL + LMB', description: locale.ui_ctrl_lmb },
     { keys: 'SHIFT + Drag', description: locale.ui_shift_drag },
+    { keys: 'ALT + Drag', description: locale.ui_alt_drag },
     { keys: 'CTRL + SHIFT + LMB', description: locale.ui_ctrl_shift_lmb },
     { keys: 'CTRL + C', description: locale.ui_ctrl_c },
   ]);

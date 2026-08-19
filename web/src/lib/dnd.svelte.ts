@@ -27,10 +27,32 @@ import type { DragSource, DropTarget } from '../typings';
 /** Movement in px before a press becomes a drag rather than a click. */
 const DRAG_THRESHOLD = 5;
 
+/**
+ * The release itself: where the pointer was and which modifiers were down.
+ *
+ * Read at release rather than tracked while the drag runs. A drag can start before the
+ * key is pressed and the key can be let go before the pointer is, so the only moment
+ * that unambiguously expresses intent is the release — which is also the moment the
+ * pointerup event hands all of this over for free.
+ *
+ * The coordinates are here rather than fetched from the module's last-known position
+ * because a drop handler that wants to open something at the cursor should not have to
+ * ask a second question to find out where the cursor was.
+ */
+export interface DropRelease {
+  alt: boolean;
+  ctrl: boolean;
+  shift: boolean;
+  x: number;
+  y: number;
+}
+
+const NO_RELEASE: DropRelease = { alt: false, ctrl: false, shift: false, x: 0, y: 0 };
+
 interface Droppable {
   /** Reject a source before it can be dropped. Mirrors react-dnd's canDrop. */
   canDrop?: (source: DragSource) => boolean;
-  ondrop: (source: DragSource) => void;
+  ondrop: (source: DragSource, release: DropRelease) => void;
 }
 
 const droppables = new Map<string, Droppable>();
@@ -157,7 +179,7 @@ export function endDrag(): void {
   document.body.classList.remove('inv-dragging');
 }
 
-function finishDrag(commit: boolean): void {
+function finishDrag(commit: boolean, release: DropRelease = NO_RELEASE): void {
   const source = drag.source;
   const overId = drag.over;
 
@@ -165,7 +187,8 @@ function finishDrag(commit: boolean): void {
     const droppable = droppables.get(overId);
     // Re-check canDrop at release: the pointer has not moved, but state may have
     // changed under it since the last hit test.
-    if (droppable && (!droppable.canDrop || droppable.canDrop(source))) droppable.ondrop(source);
+    if (droppable && (!droppable.canDrop || droppable.canDrop(source)))
+      droppable.ondrop(source, release);
   }
 
   endDrag();
@@ -227,10 +250,18 @@ export function draggable(node: HTMLElement, options: DraggableOptions) {
     setOver(hitTest(event.clientX, event.clientY));
   }
 
-  function onPointerUp() {
+  function onPointerUp(event: PointerEvent) {
     const wasDragging = !pending;
     teardown();
-    if (wasDragging) finishDrag(true);
+
+    if (wasDragging)
+      finishDrag(true, {
+        alt: event.altKey,
+        ctrl: event.ctrlKey,
+        shift: event.shiftKey,
+        x: event.clientX,
+        y: event.clientY,
+      });
   }
 
   function onPointerCancel() {
