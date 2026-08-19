@@ -239,6 +239,99 @@ function Utils.blurOut()
     TriggerScreenblurFadeOut(250)
 end
 
+--[[
+    A copy of the player, stood in front of the camera while the inventory is open.
+
+    OFF BY DEFAULT, AND TUNABLE WITHOUT A REBUILD. `inventory:preview` switches it on;
+    `inventory:previewoffset` is [distance, side, drop] in metres from the camera. Those
+    three numbers decide the framing, and the right values depend on aspect ratio, FOV and
+    how wide the two panes end up on a given screen — none of which can be guessed
+    correctly from outside the game. Making them convars means nudging the ped into the
+    margin is a server restart, not a UI rebuild. Negative `side` puts it to the left of
+    the panes, which is where the empty screen is at 16:9.
+
+    NOT A RENDER TARGET. This is a real ped standing in the world beside the camera, which
+    is why it needs the light: it is lit by wherever the player actually is, so at night or
+    indoors it would otherwise be a silhouette.
+]]
+local previewPed
+local previewOffset = json.decode(GetConvar('inventory:previewoffset', '')) or { 2.2, -0.75, 0.7 }
+
+---Forward and right vectors for the gameplay camera, both flattened enough to be useful.
+---Right is deliberately level: sliding the ped sideways across the screen should not also
+---slide it up or down when the player happens to be looking at the sky.
+local function cameraBasis()
+    local rot = GetGameplayCamRot(2)
+    local z = math.rad(rot.z)
+    local x = math.rad(rot.x)
+    local cosX = math.abs(math.cos(x))
+
+    return vec3(-math.sin(z) * cosX, math.cos(z) * cosX, math.sin(x)), vec3(math.cos(z), math.sin(z), 0.0), rot
+end
+
+function Utils.previewIn()
+    -- Self-gating so the three places that open an inventory each call one unconditional
+    -- line. A condition repeated at three call sites is a condition that gets it wrong at
+    -- one of them.
+    if not client.preview or previewPed then return end
+
+    previewPed = ClonePed(cache.ped, false, false, true)
+
+    if not previewPed or previewPed == 0 then
+        previewPed = nil
+        return
+    end
+
+    SetEntityInvincible(previewPed, true)
+    SetEntityCanBeDamaged(previewPed, false)
+    SetEntityCollision(previewPed, false, false)
+    SetBlockingOfNonTemporaryEvents(previewPed, true)
+    SetPedCanRagdoll(previewPed, false)
+    -- Marked as a mission entity so DeleteEntity is guaranteed to take: an unmarked ped can
+    -- be culled by the engine's own population manager, and then the delete does nothing
+    -- and the handle is left dangling.
+    SetEntityAsMissionEntity(previewPed, true, true)
+
+    CreateThread(function()
+        -- The camera does not turn while the inventory is open — SetNuiFocus captures the
+        -- mouse — so this could in principle place the ped once. It runs every frame
+        -- anyway, because DrawLightWithRange has to, and because a placement that survives
+        -- the camera moving for any reason is one less thing that can look broken.
+        while previewPed do
+            local ped = previewPed
+            local camera = GetGameplayCamCoord()
+            local forward, right, rot = cameraBasis()
+
+            local at = camera + forward * previewOffset[1] + right * previewOffset[2] -
+                vec3(0.0, 0.0, previewOffset[3])
+
+            SetEntityCoordsNoOffset(ped, at.x, at.y, at.z, false, false, false)
+            -- Turned to face the camera rather than away from it, which is the whole point.
+            SetEntityHeading(ped, rot.z + 180.0)
+            DrawLightWithRange(at.x, at.y, at.z + 1.2, 255, 255, 255, 2.5, 6.0)
+
+            Wait(0)
+        end
+    end)
+end
+
+function Utils.previewOut()
+    if not previewPed then return end
+
+    -- Cleared before the delete so the render thread above stops on its next tick rather
+    -- than drawing against a handle that has just been freed.
+    local ped = previewPed
+    previewPed = nil
+
+    Utils.DeleteEntity(ped)
+end
+
+-- A resource restart with the inventory open would otherwise leave the clone standing in
+-- the world with nothing left to delete it.
+AddEventHandler('onResourceStop', function(resource)
+    if resource == shared.resource then Utils.previewOut() end
+end)
+
 ---@param serverId number
 ---@return string
 local function defaultGetPlayerName(serverId)

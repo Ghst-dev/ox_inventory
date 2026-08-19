@@ -87,6 +87,9 @@ else
         player = lib.player:new(-1),
         autoreload = GetConvarBool('inventory:autoreload', false),
         screenblur = GetConvarBool('inventory:screenblur', true),
+        -- Off by default: it clones a ped into the world beside the camera, and the
+        -- framing depends on aspect ratio and FOV. See inventory:previewoffset.
+        preview = GetConvarBool('inventory:preview', false),
         keys = json.decode(GetConvar('inventory:keys', '')) or { 'F2', 'K', 'TAB' },
         enablekeys = json.decode(GetConvar('inventory:enablekeys', '[249]')),
         aimedfiring = GetConvarBool('inventory:aimedfiring', false),

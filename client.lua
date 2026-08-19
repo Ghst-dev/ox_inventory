@@ -282,6 +282,7 @@ function client.openInventory(inv, data)
     closeTrunk()
 
     if client.screenblur then Utils.blurIn() end
+    Utils.previewIn()
 
     currentInventory = right or defaultInventory
     left.items = PlayerData.inventory
@@ -339,6 +340,7 @@ RegisterNetEvent('ox_inventory:forceOpenInventory', function(left, right)
 	closeTrunk()
 
 	if client.screenblur then Utils.blurIn() end
+	Utils.previewIn()
 
 	currentInventory = right or defaultInventory
 	currentInventory.ignoreSecurityChecks = true
@@ -896,6 +898,7 @@ function client.closeInventory()
 		SetNuiFocus(false, false)
 		SetNuiFocusKeepInput(false)
 		Utils.blurOut()
+		Utils.previewOut()
 		closeTrunk()
 		SendNUIMessage({ action = 'closeInventory' })
 		SetInterval(client.interval, 200)
@@ -1634,6 +1637,7 @@ RegisterNetEvent('ox_inventory:viewInventory', function(left, right)
 	closeTrunk()
 
 	if client.screenblur then Utils.blurIn() end
+	Utils.previewIn()
 
 	currentInventory = right or defaultInventory
 	currentInventory.ignoreSecurityChecks = true
