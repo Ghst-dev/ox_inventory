@@ -94,4 +94,23 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  /*
+   * The same, asked for explicitly in the settings panel rather than by the OS.
+   *
+   * Worth having separately: a player can be fine with motion everywhere else on their
+   * machine and still not want an inventory sliding about while they are being shot at,
+   * and a lot of gaming machines never have the OS preference set at all.
+   *
+   * This reaches CSS transitions and animations only. Svelte's fly/fade/scale are JS
+   * transitions driven by rAF and are unaffected — they would each have to take their
+   * duration from the setting. They are all under 200ms, so the CSS half is most of it.
+   */
+  :root[data-reduce-motion] *,
+  :root[data-reduce-motion] *::before,
+  :root[data-reduce-motion] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

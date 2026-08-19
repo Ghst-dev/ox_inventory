@@ -4,6 +4,7 @@
   import { applyInit, type InitPayload } from './lib/state.svelte';
   import { suppressNativeDrag } from './lib/dnd.svelte';
   import { setupInventory } from './lib/inventory.svelte';
+  import { applySettings } from './lib/settings.svelte';
   import DragPreview from './features/DragPreview.svelte';
   import Inventory from './features/Inventory.svelte';
   import InventoryHotbar from './features/InventoryHotbar.svelte';
@@ -35,6 +36,9 @@
    * `import.meta.env.DEV` — a literal `false` in production — makes the branch dead code
    * and rollup drops the component and its fixtures from the bundle entirely.
    */
+  // Writes the player's chosen tokens onto documentElement and keeps them written.
+  applySettings();
+
   let DevPanel = $state<Component | null>(null);
 
   onMount(() => {

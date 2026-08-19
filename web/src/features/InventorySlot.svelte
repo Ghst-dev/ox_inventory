@@ -6,6 +6,7 @@
   import { onBuy, onCraft, onDrop, onUse } from '../lib/actions';
   import { canCraftItem, canPurchaseItem, getItemUrl, isSlotWithItem } from '../lib/helpers';
   import { items as itemDefs, locale } from '../lib/state.svelte';
+  import { settings } from '../lib/settings.svelte';
   import { InventoryType, type DragSource, type Inventory, type Slot, type SlotWithItem } from '../typings';
   import WeightBar from './WeightBar.svelte';
 
@@ -92,7 +93,7 @@
    * flash one per slot. Anchored to the slot's rect rather than the cursor — see the
    * note in ui.svelte.ts.
    */
-  const TOOLTIP_DELAY_MS = 500;
+  const delay = () => settings.tooltipDelay;
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
   function onmouseenter(event: MouseEvent) {
@@ -105,7 +106,7 @@
     if (drag.source) return;
 
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    hoverTimer = setTimeout(() => openTooltip(item as SlotWithItem, inventoryType, rect), TOOLTIP_DELAY_MS);
+    hoverTimer = setTimeout(() => openTooltip(item as SlotWithItem, inventoryType, rect), delay());
   }
 
   function dismissTooltip() {

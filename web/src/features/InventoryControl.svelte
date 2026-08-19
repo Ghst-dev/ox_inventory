@@ -7,8 +7,9 @@
   import { locale } from '../lib/state.svelte';
   import { InventoryType, type DragSource } from '../typings';
   import Icon from '../lib/Icon.svelte';
-  import { Info } from '../lib/icons';
+  import { Info, Settings } from '../lib/icons';
   import UsefulControls from './UsefulControls.svelte';
+  import SettingsPanel from './SettingsPanel.svelte';
 
   /**
    * The centre column: how many of a thing to move, and the three verbs.
@@ -20,6 +21,7 @@
    */
 
   let helpOpen = $state(false);
+  let settingsOpen = $state(false);
   let input = $state<HTMLInputElement | null>(null);
 
   /**
@@ -84,6 +86,7 @@
 </script>
 
 <UsefulControls bind:open={helpOpen} />
+<SettingsPanel bind:open={settingsOpen} />
 
 <div class="control">
   <input
@@ -113,9 +116,14 @@
 
   <button class="verb" onclick={() => fetchNui('exit')}>{locale.ui_close || 'Close'}</button>
 
-  <button class="help" onclick={() => (helpOpen = true)} aria-label={locale.ui_usefulcontrols}>
-    <Icon node={Info} size="16px" />
-  </button>
+  <div class="tools">
+    <button class="help" onclick={() => (helpOpen = true)} aria-label={locale.ui_usefulcontrols}>
+      <Icon node={Info} size="16px" />
+    </button>
+    <button class="help" onclick={() => (settingsOpen = true)} aria-label={locale.ui_settings || 'Settings'}>
+      <Icon node={Settings} size="16px" />
+    </button>
+  </div>
 </div>
 
 <style>
@@ -185,9 +193,14 @@
     color: var(--color-primary);
   }
 
-  .help {
+  .tools {
+    display: flex;
     align-self: center;
+    gap: 4px;
     margin-top: 4px;
+  }
+
+  .help {
     padding: 6px;
     color: var(--color-dim);
     border-radius: var(--radius-full);
