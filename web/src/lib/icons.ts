@@ -9,6 +9,7 @@
  */
 
 import Info from 'lucide/dist/esm/icons/info.mjs';
+import Search from 'lucide/dist/esm/icons/search.mjs';
 import X from 'lucide/dist/esm/icons/x.mjs';
 
 /**
@@ -18,4 +19,4 @@ import X from 'lucide/dist/esm/icons/x.mjs';
  */
 export type IconNode = [tag: string, attrs: Record<string, string | number>][];
 
-export { Info, X };
+export { Info, Search, X };

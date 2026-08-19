@@ -13,10 +13,17 @@
     item,
     inventoryType,
     inventoryGroups,
+    dimmed = false,
   }: {
     item: Slot;
     inventoryType: Inventory['type'];
     inventoryGroups: Inventory['groups'];
+    /**
+     * Greyed because a search in this pane did not match it. Deliberately not the same
+     * thing as `unavailable`, which means the server would refuse the purchase — a slot
+     * dimmed by a search is still perfectly usable, and still a drop target.
+     */
+    dimmed?: boolean;
   } = $props();
 
   /**
@@ -151,6 +158,7 @@
   class="slot item-art"
   class:filled
   class:unavailable={!available}
+  class:dimmed
   class:hotslot={isHotslot}
   style:background-image={imageUrl ? `url(${imageUrl})` : undefined}
   use:draggable={{ source, canDrag: () => available }}
@@ -231,6 +239,18 @@
   .unavailable {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+
+  /* Lighter than .unavailable and with no cursor change, because a search miss is still
+     a working slot — it is being pushed back, not switched off. Kept above .filled:hover
+     in source order so hovering one still lifts its border. */
+  .dimmed {
+    opacity: 0.28;
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+
+  .dimmed:hover {
+    opacity: 0.7;
   }
 
   /* Set imperatively by the droppable action, so :global keeps Svelte from pruning it
