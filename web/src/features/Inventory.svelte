@@ -13,6 +13,7 @@
   } from '../lib/inventory.svelte';
   import {
     closeContextMenu,
+    closeGivePicker,
     closeSplitPrompt,
     closeTooltip,
     closeWeaponPanel,
@@ -24,6 +25,7 @@
   import type { Inventory } from '../typings';
   import AttachmentPanel from './AttachmentPanel.svelte';
   import ContextMenu from './ContextMenu.svelte';
+  import GivePicker from './GivePicker.svelte';
   import InventoryControl from './InventoryControl.svelte';
   import InventoryGrid from './InventoryGrid.svelte';
   import SplitPrompt from './SplitPrompt.svelte';
@@ -78,6 +80,7 @@
     closeContextMenu();
     closeSplitPrompt();
     closeWeaponPanel();
+    closeGivePicker();
   }
 
   const offClose = onNuiEvent('closeInventory', () => {
@@ -212,6 +215,7 @@
   <ContextMenu />
   <SplitPrompt />
   <AttachmentPanel />
+  <GivePicker />
 {/if}
 
 <style>

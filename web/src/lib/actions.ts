@@ -21,6 +21,7 @@ import {
 import { canStack, findAvailableSlot, getTargetInventory, isSlotWithItem } from './helpers';
 import { fetchNui } from './nui';
 import { items as itemDefs } from './state.svelte';
+import { openGivePicker, type GiveTarget } from './ui.svelte';
 
 /**
  * Move an item between slots, or to the other pane when no target is given.
@@ -196,6 +197,30 @@ export const onUse = (item: Slot): void => {
   fetchNui('useItem', item.slot);
 };
 
-export const onGive = (item: Slot): void => {
-  fetchNui('giveItem', { slot: item.slot, count: inv.itemAmount });
-};
+/**
+ * Hand an item over, asking who first when there is a choice.
+ *
+ * `getGiveTargets` answers with `false` when the server has not turned the player list on
+ * (`inventory:giveplayerlist`), and with a list otherwise. Only the ambiguous case — two
+ * or more people in reach — is worth a window; with nobody or exactly one person the old
+ * call does the right thing already, including the checks this side cannot make.
+ *
+ * Anything unexpected from the callback falls through to that same old call, so a give
+ * never fails because the picker could not be shown.
+ */
+export async function onGive(item: Slot): Promise<void> {
+  const count = inv.itemAmount;
+  const give = () => fetchNui('giveItem', { slot: item.slot, count });
+
+  try {
+    const targets = await fetchNui<GiveTarget[] | false>('getGiveTargets', {});
+
+    if (Array.isArray(targets) && targets.length > 1) {
+      return openGivePicker(item.slot, count, targets);
+    }
+  } catch {
+    // Callback missing or errored — an older client.lua, or a resource restart mid-call.
+  }
+
+  give();
+}

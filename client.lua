@@ -1718,50 +1718,67 @@ local function isGiveTargetValid(ped, coords)
     return entity == ped and IsEntityVisible(ped)
 end
 
+---Players close enough, visible enough and reachable enough to hand something to.
+---
+---Returns nil rather than an empty table when `inventory:giveplayerlist` is off, so a
+---caller can tell "the server does not use a list" apart from "nobody is standing here"
+---and fall back to the aim-and-give behaviour below.
+---
+---Extracted from the callback so the inventory UI can offer the same choice in its own
+---window: the list was previously built and consumed in one place, which is why the only
+---way to pick a recipient was ox_lib's menu drawn over the top of the inventory.
+---@return { id: number, label: string }[]?
+local function nearbyGiveTargets()
+    if not client.giveplayerlist then return end
+
+    local coords = cache.vehicle and GetWorldPositionOfEntityBone(playerPed, 0) or GetEntityCoords(playerPed)
+    local nearbyPlayers = lib.getNearbyPlayers(coords, 3.0)
+    local targets, n = {}, 0
+
+    for i = 1, #nearbyPlayers do
+        local option = nearbyPlayers[i]
+
+        if isGiveTargetValid(option.ped, option.coords) then
+            local serverId = GetPlayerServerId(option.id)
+            n += 1
+            targets[n] = { id = serverId, label = Utils.getPlayerName(serverId) }
+        end
+    end
+
+    return targets
+end
+
+RegisterNUICallback('getGiveTargets', function(_, cb)
+    cb(nearbyGiveTargets() or false)
+end)
+
+RegisterNUICallback('giveItemTo', function(data, cb)
+    cb(1)
+
+    if usingItem then return end
+
+    giveItemToTarget(data.target, data.slot, data.count)
+end)
+
 RegisterNUICallback('giveItem', function(data, cb)
 	cb(1)
 
     if usingItem then return end
 
-	if client.giveplayerlist then
-		local coords = cache.vehicle and GetWorldPositionOfEntityBone(playerPed, 0) or GetEntityCoords(playerPed)
+	local targets = nearbyGiveTargets()
 
-		local nearbyPlayers = lib.getNearbyPlayers(coords, 3.0)
-        local nearbyCount = #nearbyPlayers
+	if targets then
+        local count = #targets
 
-		if nearbyCount == 0 then return end
-
-        if nearbyCount == 1 then
-			local option = nearbyPlayers[1]
-
-            if not isGiveTargetValid(option.ped, option.coords) then return end
-
-            return giveItemToTarget(GetPlayerServerId(option.id), data.slot, data.count)
-        end
-
-        local giveList, n = {}, 0
-
-		for i = 1, #nearbyPlayers do
-			local option = nearbyPlayers[i]
-
-            if isGiveTargetValid(option.ped, option.coords) then
-				option.id = GetPlayerServerId(option.id)
-				local playerName = Utils.getPlayerName(option.id)
-                ---@diagnostic disable-next-line: inject-field
-				option.label = playerName
-				n += 1
-				giveList[n] = option
-			end
-		end
-
-        if n == 0 then return end
+		if count == 0 then return end
+        if count == 1 then return giveItemToTarget(targets[1].id, data.slot, data.count) end
 
 		lib.registerMenu({
 			id = 'ox_inventory:givePlayerList',
 			title = 'Give item',
-			options = giveList,
+			options = targets,
 		}, function(selected)
-            giveItemToTarget(giveList[selected].id, data.slot, data.count)
+            giveItemToTarget(targets[selected].id, data.slot, data.count)
         end)
 
 		return lib.showMenu('ox_inventory:givePlayerList')

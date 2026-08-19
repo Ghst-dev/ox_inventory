@@ -24,8 +24,16 @@ export const nuiMocks: Record<string, unknown | ((data?: unknown) => unknown)> =
   /** craftItem answers immediately and loops server-side. */
   craftItem: true,
 
+  /**
+   * The nearby-player list for the give picker. `false` is the honest default here: it is
+   * what client.lua answers when `inventory:giveplayerlist` is off, and it is the path
+   * that falls back to the old aim-and-give call. DevPanel replaces it with a real list.
+   */
+  getGiveTargets: false,
+
   /** Everything else: the `cb(1)` acknowledgement. */
   useItem: 1,
+  giveItemTo: 1,
   giveItem: 1,
   useButton: 1,
   removeComponent: 1,

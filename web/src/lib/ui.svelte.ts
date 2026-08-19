@@ -112,3 +112,37 @@ export function openWeaponPanel(slot: number) {
 export function closeWeaponPanel() {
   weaponPanel.slot = null;
 }
+
+/**
+ * Who to hand the item to, when more than one person is standing there.
+ *
+ * This choice already existed — client.lua built the same list and showed it through
+ * `lib.registerMenu`, which draws ox_lib's menu over the top of the open inventory in a
+ * different visual language, with the inventory still sitting behind it. The list is now
+ * fetched by the UI and offered in its own window; the ox_lib path stays as the fallback
+ * for anything that reaches `giveItem` without going through here.
+ */
+export interface GiveTarget {
+  /** Server id, which is what giveItemToTarget expects. */
+  id: number;
+  label: string;
+}
+
+export const givePicker = $state<{
+  open: boolean;
+  slot: number;
+  count: number;
+  targets: GiveTarget[];
+}>({ open: false, slot: 0, count: 0, targets: [] });
+
+export function openGivePicker(slot: number, count: number, targets: GiveTarget[]) {
+  givePicker.slot = slot;
+  givePicker.count = count;
+  givePicker.targets = targets;
+  givePicker.open = true;
+}
+
+export function closeGivePicker() {
+  givePicker.open = false;
+  givePicker.targets = [];
+}
