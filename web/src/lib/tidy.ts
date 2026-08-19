@@ -23,6 +23,7 @@ import { onDrop } from './actions';
 import { categoryOf, categoryRank, slotLabel } from './categories';
 import { canStack, isSlotWithItem } from './helpers';
 import { inv } from './inventory.svelte';
+import { isPinned } from './pins.svelte';
 import { items as itemDefs } from './state.svelte';
 import { InventoryType, type Inventory, type Slot } from '../typings';
 
@@ -36,17 +37,14 @@ import { InventoryType, type Inventory, type Slot } from '../typings';
 const MAX_OPS = 60;
 
 /**
- * How many leading slots are left exactly where they are, per inventory type.
+ * Which slots are off limits.
  *
- * The player's first five are bound to the number keys, in here and out in the world.
- * Sorting them would silently rearrange the one part of the inventory people operate by
- * muscle memory — you would press 2 for a bandage and drink a beer. Nothing else has that
- * problem, so nothing else is protected.
- *
- * This is the poor relation of pinned slots (16); when that exists, this becomes "leave
- * the pinned ones", and the special case for slots 1-5 can go.
+ * Arbitrary rather than a leading run, which is why both phases below work over an
+ * explicit list of movable positions instead of counting from an offset. Slots 1-5 are
+ * pinned by default, so the common case still reads as "the hotbar is left alone" — but a
+ * player who pins slot 22 gets exactly the same protection there.
  */
-const protectedSlots = (type: string) => (type === InventoryType.PLAYER ? 5 : 0);
+const locked = (type: string, slot: number) => isPinned(type, slot);
 
 export interface TidyResult {
   moves: number;
@@ -71,7 +69,6 @@ function order(a: Slot, b: Slot): number {
 }
 
 export async function tidy(type: string): Promise<TidyResult> {
-  const keep = protectedSlots(type);
   const result: TidyResult = { moves: 0, capped: false, stalled: false };
 
   /**
@@ -111,13 +108,15 @@ export async function tidy(type: string): Promise<TidyResult> {
   merging: while (result.moves < MAX_OPS && !result.stalled) {
     const items = paneFor(type).items;
 
-    for (let i = keep; i < items.length; i++) {
+    for (let i = 0; i < items.length; i++) {
       const source = items[i];
 
+      if (locked(type, source.slot)) continue;
       if (!isSlotWithItem(source) || !itemDefs[source.name]?.stack) continue;
 
-      // Scanned from zero, not from `keep`: a protected hot slot may absorb a loose stack
-      // from further down, which is the one thing about the hotbar a tidy should do.
+      // Targets are not filtered by `locked`: a pinned slot may absorb a loose stack of
+      // what it already holds. That is more of the thing the player pinned, in the place
+      // they pinned it — the one rearrangement of a hot slot nobody objects to.
       for (let j = 0; j < i; j++) {
         const target = items[j];
 
@@ -133,19 +132,30 @@ export async function tidy(type: string): Promise<TidyResult> {
 
   /* -- Phase two: selection sort, which compacts into the empty slots on the way. -- */
 
-  for (let position = keep; position < paneFor(type).items.length; position++) {
+  // The positions this sort is allowed to write into, in order. Pinned slots are absent,
+  // so nothing is ever placed into one and nothing is ever taken out of one.
+  const movable = paneFor(type)
+    .items.map((slot) => slot.slot)
+    .filter((slot) => !locked(type, slot));
+
+  for (let index = 0; index < movable.length; index++) {
     if (result.moves >= MAX_OPS || result.stalled) break;
 
     const items = paneFor(type).items;
-    const remaining = items.slice(position).filter((slot) => isSlotWithItem(slot));
+    const here = movable[index];
 
-    // Nothing left to place: everything after this point is already empty.
-    if (!remaining.length) break;
+    const candidates = movable
+      .slice(index)
+      .map((slot) => items[slot - 1])
+      .filter((slot) => isSlotWithItem(slot));
 
-    const wanted = remaining.reduce((best, slot) => (order(slot, best) < 0 ? slot : best));
+    // Nothing left to place: every movable slot from here on is already empty.
+    if (!candidates.length) break;
 
-    if (wanted.slot === items[position].slot) continue;
-    if (!(await move(wanted.slot, items[position].slot, wanted.count!))) break;
+    const wanted = candidates.reduce((best, slot) => (order(slot, best) < 0 ? slot : best));
+
+    if (wanted.slot === here) continue;
+    if (!(await move(wanted.slot, here, wanted.count!))) break;
   }
 
   result.capped = result.moves >= MAX_OPS;

@@ -59,6 +59,7 @@ export const locale: Record<string, string> = {
   ui_move: 'Move',
   ui_no_attachments: 'Nothing fitted',
   ui_off: 'Off',
+  ui_pin: 'Pin slot',
   ui_remove: 'Remove',
   ui_remove_ammo: 'Remove ammo',
   ui_removeattachments: 'Remove attachments',
@@ -71,6 +72,7 @@ export const locale: Record<string, string> = {
   ui_tidy: 'Tidy',
   ui_tidy_hint: 'Stack and sort. Slots 1-5 stay where they are.',
   ui_tint: 'Tint',
+  ui_unpin: 'Unpin slot',
   ui_use: 'Use',
   ui_usefulcontrols: 'Useful Controls',
 };

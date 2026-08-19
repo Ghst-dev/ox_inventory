@@ -2,6 +2,7 @@
   import { onDrop, onGive, onUse } from '../lib/actions';
   import { fetchNui } from '../lib/nui';
   import { anchored } from '../lib/position';
+  import { isPinned, pinnable, togglePin } from '../lib/pins.svelte';
   import { items as itemDefs, locale } from '../lib/state.svelte';
   import { closeContextMenu, contextMenu, openWeaponPanel } from '../lib/ui.svelte';
   import { setClipboard } from '../utils/setClipboard';
@@ -100,6 +101,22 @@
       item.metadata?.serial !== undefined ||
       item.metadata?.components !== undefined ||
       itemDefs[item.name]?.ammoName !== undefined;
+
+    /**
+     * Pinning is about the square, not the thing in it, so the entry says "slot".
+     *
+     * It is only offered in the player's own inventory — the menu only opens there today
+     * anyway, but the restriction is real: a stash id changes with every property, boot
+     * and drop, so pins kept per stash would grow without bound.
+     */
+    if (pinnable(InventoryType.PLAYER)) {
+      const on = isPinned(InventoryType.PLAYER, item.slot);
+
+      list.push({
+        label: on ? locale.ui_unpin || 'Unpin slot' : locale.ui_pin || 'Pin slot',
+        run: () => togglePin(InventoryType.PLAYER, item.slot),
+      });
+    }
 
     if (isWeapon) {
       list.push({

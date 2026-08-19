@@ -11,9 +11,12 @@
     getTargetInventory,
     isSlotWithItem,
   } from '../lib/helpers';
+  import { isPinned } from '../lib/pins.svelte';
   import { items as itemDefs, locale } from '../lib/state.svelte';
   import { settings } from '../lib/settings.svelte';
   import { InventoryType, type DragSource, type Inventory, type Slot, type SlotWithItem } from '../typings';
+  import Icon from '../lib/Icon.svelte';
+  import { Pin } from '../lib/icons';
   import WeightBar from './WeightBar.svelte';
 
   let {
@@ -65,6 +68,10 @@
   // hotbar component itself — Svelte's scoping keeps the two rules apart, but the name
   // collision is a reading trap.
   const isHotslot = $derived(inventoryType === InventoryType.PLAYER && item.slot <= 5);
+
+  // Marked whether or not the slot holds anything: the pin is about the square, and an
+  // empty pinned slot is a space being kept free on purpose.
+  const pinned = $derived(isPinned(inventoryType, item.slot));
 
   const source = (): DragSource | null => {
     // A shop slot is draggable even with a zero count so the purchase can be refused
@@ -193,6 +200,7 @@
   class:dimmed
   class:lifted={isDragging(inventoryType, item.slot)}
   class:hotslot={isHotslot}
+  class:pinned
   style:background-image={imageUrl ? `url(${imageUrl})` : undefined}
   use:draggable={{ source, canDrag: () => available }}
   use:droppable={{ canDrop, ondrop: accept }}
@@ -202,6 +210,10 @@
   onmouseleave={dismissTooltip}
   onpointerdown={dismissTooltip}
 >
+  {#if pinned}
+    <span class="pin" aria-hidden="true"><Icon node={Pin} size="10px" /></span>
+  {/if}
+
   {#if filled}
     <div class="head">
       {#if isHotslot}<span class="hotkey">{item.slot}</span>{/if}
@@ -264,6 +276,25 @@
      slightly raised rather than as another cell in the grid. */
   .hotslot {
     background-color: var(--surface-raised);
+  }
+
+  /*
+   * A pin is a note to the tidy button, not a lock — the slot is dragged out of exactly as
+   * before. So it is marked, not styled: a glyph in the corner rather than a different
+   * border, which would read as a state the slot is in.
+   */
+  .pin {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    z-index: 1;
+    display: flex;
+    color: var(--color-dim);
+    pointer-events: none;
+  }
+
+  .pinned:hover .pin {
+    color: var(--color-primary);
   }
 
   /* Cannot afford it, cannot craft it, or the wrong job. Upstream used a CSS filter for
