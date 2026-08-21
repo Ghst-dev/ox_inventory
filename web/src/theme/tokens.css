@@ -124,6 +124,54 @@
   --surface-sunken: rgba(10, 10, 10, 0.7);
   --scrim: rgba(10, 10, 10, 0.6);
 
+  /*
+   * AMBIENT SURFACES — the second tier, for anything drawn over live gameplay.
+   *
+   * The surfaces above are the FOCUSED tier: a panel that has taken NUI focus, with the
+   * game held still behind it. The player is reading dense text and the scene is not
+   * competing, so 0.92 opacity and a heavy shadow cost nothing.
+   *
+   * An instrument, a notification or a target label is a different problem. It sits over
+   * moving gameplay the player still has to see through, at every hour of the in-game day,
+   * and it is never the thing being looked at. So: lighter, tighter, and edge-lit rather
+   * than edge-drawn.
+   *
+   *   --border-ambient is white at 9% rather than a dark grey, and that is the
+   *   load-bearing part. A solid #2a2a2a edge is DARKER than a night sky, so a panel
+   *   wearing it reads as a hole punched in the screen at exactly the hour when surface
+   *   and background are nearest in value. A white edge lifts against whatever is behind.
+   *
+   *   --shadow-ambient is 10px, not 40px. A 40px shadow under a small always-on element
+   *   smears across pale concrete as a grey bruise; a tight one reads as a lifted chip.
+   *
+   * THE RULE: if the game is moving behind it, ambient. If the game is dimmed behind it,
+   * focused. That is the same shape as the primary/action rule above — a question about
+   * the moment, not about the component.
+   */
+  --surface-ambient: rgba(9, 11, 13, 0.82);
+  --border-ambient: rgba(255, 255, 255, 0.09);
+  --shadow-ambient: 0 2px 10px rgba(0, 0, 0, 0.45);
+
+  /*
+   * For glyphs and strokes with NO surface under them at all — a target label on the
+   * world, a conformal stroke. Ambient text that sits on --surface-ambient does not need
+   * this; text drawn straight onto the scene does.
+   */
+  --legible-glyph: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+
+  /*
+   * The TEXT counterpart, for words drawn straight onto the scene. Four offset copies at
+   * zero blur rather than a blurred drop: each copy sits BEHIND the glyph, so nothing
+   * encroaches on the letterform and there is no width ceiling; the four diagonals close
+   * the ring; and with no blur radius there is no grey cloud around small type. qb-hud and
+   * ps-hud both arrived at this rule at the same 0.7 alpha, independently.
+   *
+   * ONE MECHANISM, NEVER TWO. Anything carrying --legible-text must not also sit inside a
+   * filtered container -- that double-inking is what makes a HUD shout.
+   */
+  --legible-text: -1px -1px 0 rgba(0, 0, 0, 0.7), 1px -1px 0 rgba(0, 0, 0, 0.7),
+    -1px 1px 0 rgba(0, 0, 0, 0.7), 1px 1px 0 rgba(0, 0, 0, 0.7);
+
   /* Glass edge: a 1px top highlight sells "pane of glass" far more cheaply than
      more blur does, and costs nothing per frame. */
   --edge-highlight: rgba(255, 255, 255, 0.06);
