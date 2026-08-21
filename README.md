@@ -14,7 +14,19 @@ A complete and modern inventory system for FiveM, providing a flexible slot-base
 Refer to [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines and to see our Contributor License Agreement.\
 Refer to [NOTICE.md](./NOTICE.md) for additional information and legal notices.
 
+**This is a fork.** Everything below is upstream's; what differs is in [docs/](docs/).
+
 </div>
+
+## 🧩 This fork
+
+Forked for the Ghst-dev server. The inventory model is upstream's — slots, weight, metadata,
+stashes, shops, crafting — so upstream's documentation still applies. What differs is the
+interface, rebuilt in Svelte, and a handful of seams cut for it.
+
+| | |
+|---|---|
+| [docs/changes.md](docs/changes.md) | What differs from upstream, and why |
 
 ## 📚 Documentation
 
