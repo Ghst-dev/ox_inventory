@@ -92,6 +92,27 @@ nothing should.
 `web/tools/check-tokens.mjs` runs after every build and fails on a `var(--x)` with no fallback
 that nothing declares.
 
+## A locked car has a locked boot
+
+One condition in `Inventory.CanAccessTrunk` (`modules/inventory/client.lua`), and the only
+behaviour change outside the interface.
+
+Upstream checks the vehicle class, the storage data, that a boot door exists and that you are
+within a metre and a half of it — and never asks whether the vehicle is **locked**. On a server
+running `ghst_vehiclekeys` that made the whole keys mechanic optional: a car nobody could open
+or start was still a car anybody could empty, and cargo is what most vehicle theft is actually
+for.
+
+It reads `Entity(entity).state.doorslockstate` rather than calling
+`exports.ghst_vehiclekeys:IsAccessible`. The lock state is already replicated to every client,
+so there is no round trip, no export call per frame, and no dependency on that resource being
+started: a vehicle with no lock state — every world car nobody has tried a door on — reads as
+unlocked and behaves exactly as upstream does.
+
+Keys are deliberately *not* consulted. Locked means locked, including for the owner, who
+unlocks the car and then opens the boot. That is one extra press, and it is the same press a
+thief has to earn.
+
 ## Framework-strip patches
 
 Two changes carried from the server's framework strip rather than invented here: the

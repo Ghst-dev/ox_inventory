@@ -56,6 +56,23 @@ function Inventory.CanAccessTrunk(entity)
 
     if IsEntityDead(entity) then return end
 
+    --- A locked car has a locked boot. **Ghst-dev change**, and the one that made the keys
+    --- mechanic mean anything: upstream checks the class, the storage data, that the door
+    --- exists and that you are within reach, and never asks whether the vehicle is locked --
+    --- so a car nobody could start was a car anybody could empty, and cargo is what most
+    --- theft is actually for. The glovebox needs no such line: reaching it means sitting in
+    --- the driver's seat, which the lock already governs.
+    ---
+    --- The statebag rather than `exports.ghst_vehiclekeys:IsAccessible`: `doorslockstate` is
+    --- replicated to every client, so this costs no round trip and no export call, and a
+    --- world vehicle nobody has tried yet has no state at all -- which reads as unlocked and
+    --- leaves upstream's behaviour exactly as it was until somebody decides otherwise.
+    ---
+    --- 2 is locked, in GTA's numbering and in ghst_vehiclekeys'. Keys are not consulted on
+    --- purpose: the owner unlocks the car and then opens the boot, which is one press more
+    --- and the same press a thief needs.
+    if Entity(entity).state.doorslockstate == 2 then return end
+
     local vehicleHash = GetEntityModel(entity)
     local vehicleClass = GetVehicleClass(entity)
     local checkVehicle = Vehicles.Storage[vehicleHash]
