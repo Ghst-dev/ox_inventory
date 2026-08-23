@@ -4,6 +4,7 @@
   import { fetchNui, onNuiEvent } from '../lib/nui';
   import { drag, endDrag } from '../lib/dnd.svelte';
   import {
+    clearContainer,
     inv,
     refreshSlots,
     setAdditionalMetadata,
@@ -77,6 +78,11 @@
     // A drag surviving the inventory closing would drop into a pane that is no longer
     // on screen. React reached for manager.dispatch({type:'dnd-core/END_DRAG'}) here.
     endDrag();
+
+    // The bag pane's lifetime is the window's: client.lua forgets `currentContainer` in
+    // closeInventory and the server forgets `containerSlot`, so a pane kept past this
+    // point is one nothing else believes in. See clearContainer for what that cost.
+    clearContainer();
     closeTooltip();
     closeContextMenu();
     closeSplitPrompt();
@@ -215,14 +221,16 @@
 <svelte:window onkeyup={onKeyUp} onkeydown={onKeyDown} />
 
 {#if ui.inventoryOpen}
-  <!-- The bag sits left of the player's own inventory rather than beyond the stash: it is
-       part of you, and keeping it on that side leaves the you-and-them relationship across
-       the control column exactly where players already look for it. -->
-  <div class="wrapper" class:wide={!!inv.containerInventory} transition:fade={{ duration: 150 }}>
-    {#if inv.containerInventory}
-      <InventoryGrid inventory={inv.containerInventory} container />
-    {/if}
-    <InventoryGrid inventory={inv.leftInventory} />
+  <!-- The bag hangs under the player's own inventory rather than beside it: it is part of
+       you, so it stays on your side of the control column, and stacking keeps the row to
+       the two columns players already read left-to-right however many bags are open. -->
+  <div class="wrapper" class:stacked={!!inv.containerInventory} transition:fade={{ duration: 150 }}>
+    <div class="column">
+      <InventoryGrid inventory={inv.leftInventory} />
+      {#if inv.containerInventory}
+        <InventoryGrid inventory={inv.containerInventory} container />
+      {/if}
+    </div>
     <InventoryControl />
     <InventoryGrid inventory={inv.rightInventory} />
   </div>
@@ -260,41 +268,71 @@
 
     /* Centres within the space beside the dev drawer. 0 everywhere else — see app.css. */
     padding-left: var(--dev-shift);
+
+    /* A stacked column is sized to fit whatever is left of the viewport, and without this
+       "whatever is left" is the whole of it — panes flush against the top and bottom
+       edges of the screen. This is the margin they keep. */
+    padding-block: 16px;
   }
 
   /*
-   * Three panes and the control column need more room than two.
+   * The player's own column: their inventory, and under it the bag they have open.
    *
-   * Only the gaps close up. Scaling the row down with a transform is the obvious next
-   * step and is exactly what the note above forbids: a transformed element becomes the
-   * containing block for its `position: fixed` descendants, and the settings and controls
-   * dialogs are rendered from InventoryControl, which is inside here. Their scrims would
-   * cover the panes and nothing else, which is the bug that comment was written about.
-   *
-   * On a client too narrow for three panes, the slot-size control in the settings panel
-   * is the deliberate way to buy the space back.
+   * Centred with the other two rather than top-aligned, so the whole assembly stays
+   * optically centred when a bag opens. What moves is this column alone — the control
+   * column and the pane opposite are untouched, because each flex item is centred on its
+   * own height.
    */
-  .wrapper.wide {
+  .column {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
+
+    /*
+     * THE COLUMN NEVER OUTGROWS THE SCREEN. Its two panes are otherwise both fixed
+     * heights, and flexbox answers a column that does not fit by hanging it off both
+     * ends — the player's first row above the top of the screen and the bag's last below
+     * the bottom, on a 1080p client with a twenty-slot bag.
+     *
+     * So the bag gives way instead: this bounds the column, the pane below is the only
+     * one allowed to shrink, and its grid scrolls to whatever rows are left. Every
+     * viewport and every combination of headers, search fields and chips is then handled
+     * by the same rule, without a table of heights to keep true.
+     */
+    max-height: 100%;
+    min-height: 0;
+  }
+
+  /* The player's own pane keeps its five rows whatever happens. Addressed by position
+     rather than :first-child, which would also match it when it is the only pane here and
+     hand it the shrinking rule below. */
+  .column > :global(.pane:nth-child(1)) {
+    flex: none;
+  }
+
+  /* The bag, second and last, is the one that gives way — see .column. */
+  .column > :global(.pane:nth-child(2)) {
+    flex: 0 1 auto;
+    min-height: 0;
   }
 
   /*
-   * Below this the three panes, the control column and the gaps no longer fit, and
-   * flexbox resolves that by squashing the control column — the amount box and the three
-   * verbs are the first things to lose their width, which is the worst possible answer.
+   * A stacked column is taller than a single pane, so the slots give up a tenth of their
+   * size to buy the room back. Measured, not guessed: a fifteenth is what a twenty-slot
+   * bag needs to show all four of its rows beside a forty-slot inventory at 1080p, which
+   * is the common client. Below that .column's rule takes over and the bag scrolls.
    *
-   * Shrinking the slots instead keeps every column intact, and it is done by declaring
-   * --slot-size here rather than by setting some factor that :root's declaration reads:
-   * a custom property is substituted where it is declared, so a factor set on this
-   * element would never reach a --slot-size declared on :root.
+   * Done by declaring --slot-size here rather than by setting some factor that :root's
+   * declaration reads: a custom property is substituted where it is *declared*, so a
+   * factor set on this element would never reach a --slot-size declared on :root. Hence
+   * :root splits the size into a base and a scalar for this to re-derive.
    *
    * Not a transform, either. A transformed element becomes the containing block for its
    * `position: fixed` descendants, and the settings and controls dialogs are rendered
-   * from inside here — see the note on .wrapper above.
+   * from InventoryControl, which is inside here — see the note on .wrapper above.
    */
-  @media (max-width: 1500px) {
-    .wrapper.wide {
-      --slot-size: calc(var(--slot-base) * var(--slot-scale) * 0.78);
-    }
+  .wrapper.stacked {
+    --slot-size: calc(var(--slot-base) * var(--slot-scale) * 0.85);
   }
+
 </style>

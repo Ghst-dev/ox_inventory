@@ -106,6 +106,7 @@ export const items: Record<string, ItemData> = {
   garbage: item('garbage', 'Garbage'),
   scrapmetal: item('scrapmetal', 'Scrap Metal', { category: 'material' }),
   money: item('money', 'Cash', { usable: false, category: 'valuable' }),
+  backpack: item('backpack', 'Backpack', { stack: false, category: 'tool' }),
   'ammo-9': item('ammo-9', '9mm Rounds', { usable: false, category: 'ammo' }),
   at_suppressor: item('at_suppressor', 'Suppressor', { stack: false, usable: false, category: 'component' }),
   at_flashlight: item('at_flashlight', 'Flashlight', { stack: false, usable: false, category: 'component' }),
@@ -161,6 +162,16 @@ export const player: Inventory = {
       count: 1,
       weight: 200,
       metadata: { durability: Math.floor(Date.now() / 1000) + 1800, degrade: 60 },
+    },
+    // A bag. `metadata.container` is the id of the inventory it opens (modules/items/
+    // server.lua:198 generates it) and `size` is {slots, maxWeight} — the pair the header
+    // button in the player's pane looks for before it offers itself.
+    {
+      slot: 5,
+      name: 'backpack',
+      count: 1,
+      weight: 1000,
+      metadata: { container: 'container-bag1', size: [20, 20000] },
     },
   ]),
   groups: { police: 2 },
@@ -230,9 +241,14 @@ export const crafting: Inventory = {
   ]),
 };
 
-/** A bag opened from inside the player's inventory. */
+/**
+ * A bag opened from inside the player's inventory, as the *right* pane — what using one
+ * from the hotbar does, with the inventory closed. Its id is the one the player fixture's
+ * bag item carries, so the header button correctly recognises this as the same bag and
+ * stands down rather than offering to open it twice.
+ */
 export const container: Inventory = {
-  id: 'bag1',
+  id: 'container-bag1',
   type: 'container',
   label: 'Duffel Bag',
   slots: 10,

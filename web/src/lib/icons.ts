@@ -9,6 +9,7 @@
  */
 
 import ArrowDownAZ from 'lucide/dist/esm/icons/arrow-down-a-z.mjs';
+import Backpack from 'lucide/dist/esm/icons/backpack.mjs';
 import Info from 'lucide/dist/esm/icons/info.mjs';
 import Pin from 'lucide/dist/esm/icons/pin.mjs';
 import Search from 'lucide/dist/esm/icons/search.mjs';
@@ -22,4 +23,4 @@ import X from 'lucide/dist/esm/icons/x.mjs';
  */
 export type IconNode = [tag: string, attrs: Record<string, string | number>][];
 
-export { ArrowDownAZ, Info, Pin, Search, Settings, X };
+export { ArrowDownAZ, Backpack, Info, Pin, Search, Settings, X };

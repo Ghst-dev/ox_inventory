@@ -53,7 +53,7 @@ inventory looks unfamiliar.
 | **Tidy** | Merge what stacks, then order it — with pinned slots left alone |
 | **Give, in place** | Pick who gets the item inside the inventory |
 | **A ped preview** | A copy of the player beside the inventory. Off by default |
-| **Bags open beside a stash** | Rather than replacing it |
+| **Bags open under your own pane** | On a button in its header, rather than replacing whatever you were looking at |
 | **A voice** | Sound, without shipping a single audio file — see below |
 
 ## Sound without audio files

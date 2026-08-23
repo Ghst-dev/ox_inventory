@@ -1879,6 +1879,24 @@ RegisterNUICallback('giveItem', function(data, cb)
     end
 end)
 
+--[[
+    The bag button in the player's own pane, which is the only way to open a bag without
+    taking your hand off the mouse to use the item.
+
+    Answered before the work, like closeContainer below it: client.openContainer awaits a
+    server callback, and leaving the NUI's fetch hanging on that round-trip is what makes
+    a button feel stuck. The slot is not trusted — the server's openContainer callback
+    checks it holds a container, and the worst a forged one can name is a slot in the
+    player's own inventory.
+]]
+RegisterNUICallback('openContainer', function(slot, cb)
+    cb(1)
+
+    if type(slot) ~= 'number' then return end
+
+    client.openContainer(slot)
+end)
+
 RegisterNUICallback('closeContainer', function(_, cb)
     cb(1)
     client.closeContainer()

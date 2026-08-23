@@ -168,8 +168,33 @@ export function setupInventory(data: {
   if (data.leftInventory) inv.leftInventory = buildInventory(data.leftInventory);
   if (data.rightInventory) inv.rightInventory = buildInventory(data.rightInventory);
 
+  // A window always opens without a bag pane. See clearContainer.
+  clearContainer();
+
   inv.shiftPressed = false;
   inv.isBusy = false;
+}
+
+/**
+ * Forget the bag pane.
+ *
+ * THE PANE MUST NOT OUTLIVE THE WINDOW. It is the one piece of inventory state with a
+ * shorter lifetime than the rest: client.lua drops its own `currentContainer` in
+ * closeInventory and the server drops `containerSlot` in OxInventory:closeInventory, so a
+ * pane still standing here after a close is a pane nobody else believes in.
+ *
+ * What that cost, before this existed: close the inventory with a bag open, reopen it, and
+ * the bag came back — visibly fine, and dead. Its X did nothing, because the callback it
+ * fires returns early when client.lua has no `currentContainer`. Worse, dropping into it
+ * sent `toType = 'container'` to a server with no `containerSlot`, which resolved the
+ * non-player side through `Inventory(playerInventory.open)` — the player's *own*
+ * inventory, when nothing else is open. The item really did move, from one of their slots
+ * to another, while this pane painted a second copy of it into the ghost bag.
+ *
+ * So it is cleared wherever the window goes away, and again when it comes back.
+ */
+export function clearContainer(): void {
+  inv.containerInventory = null;
 }
 
 /**

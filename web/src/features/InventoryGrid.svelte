@@ -7,7 +7,7 @@
   import { InventoryType, type Inventory, type Slot } from '../typings';
   import { tidy } from '../lib/tidy';
   import Icon from '../lib/Icon.svelte';
-  import { ArrowDownAZ, Search, X } from '../lib/icons';
+  import { ArrowDownAZ, Backpack, Search, X } from '../lib/icons';
   import InventorySlot from './InventorySlot.svelte';
   import WeightBar from './WeightBar.svelte';
 
@@ -42,6 +42,65 @@
 
   const searchable = $derived(inventory.slots > SEARCH_THRESHOLD);
   const needle = $derived(query.trim().toLowerCase());
+
+  /**
+   * How many rows of the bag to show.
+   *
+   * The other panes are a fixed five rows so that two side by side are the same height
+   * (see .slot-grid in app.css). A bag is not beside anything — it hangs under the
+   * player's own pane — so five rows of it would push the pair past the bottom of the
+   * screen on a 1080p client. It gets its own count instead: as many rows as it has, up
+   * to four, and it scrolls beyond that.
+   *
+   * --grid-cols is the column count the CSS lays out with; it is a constant, and the
+   * arithmetic to turn slots into rows has to happen here rather than in the stylesheet.
+   */
+  const GRID_COLS = 5;
+  const MAX_CONTAINER_ROWS = 4;
+
+  const gridRows = $derived(
+    container ? Math.min(Math.ceil(inventory.slots / GRID_COLS), MAX_CONTAINER_ROWS) : null,
+  );
+
+  /**
+   * The bag the player is carrying, if any — the button in this pane's header opens it.
+   *
+   * Only their own pane offers it, and only the first container found: with two bags on
+   * you the button is a shortcut to one of them, and using the item itself still opens
+   * whichever you meant. A bag inside a bag is impossible (onDrop refuses it), so the
+   * pane's own items are the whole search.
+   */
+  const bagSlot = $derived(
+    inventory.type === InventoryType.PLAYER
+      ? inventory.items.find((slot) => slot.metadata?.container !== undefined)
+      : undefined,
+  );
+
+  const bagOpen = $derived(!!inv.containerInventory);
+
+  /**
+   * The bag is already the right-hand pane, which is what using one from the hotbar does:
+   * client.lua opens the inventory *with* the bag rather than adding a pane to a window
+   * that is not up yet. The server refuses to show one inventory in two panes at once, so
+   * the button would be a no-op — it is not offered.
+   */
+  const bagOnRight = $derived(
+    !!bagSlot &&
+      inv.rightInventory.type === InventoryType.CONTAINER &&
+      inv.rightInventory.id === bagSlot.metadata?.container,
+  );
+
+  const bagLabel = $derived(
+    bagSlot ? (bagSlot.metadata?.label ?? itemDefs[bagSlot.name!]?.label ?? bagSlot.name) : '',
+  );
+
+  /**
+   * Toggling is asymmetric on purpose. Closing goes through `closeContainer`, which shuts
+   * whichever bag is open; opening names a slot. With one bag the two are the same thing,
+   * and with two the button never has to guess which one you meant to close.
+   */
+  const toggleBag = () =>
+    bagOpen ? fetchNui('closeContainer') : fetchNui('openContainer', bagSlot!.slot);
 
   /**
    * Chips are built from what is actually in the pane, not from the full category list.
@@ -233,27 +292,45 @@
   <header>
     <p class="title">{inventory.label ?? ''}</p>
 
-    {#if container}
-      <button
-        class="tidy dismiss"
-        onclick={() => fetchNui('closeContainer')}
-        aria-label={locale.ui_close || 'Close'}
-      >
-        <Icon node={X} size="14px" />
-      </button>
-    {/if}
+    <!-- One box for every header button, rather than an auto margin on each: two buttons
+         each pushing themselves right would split the free space between them instead of
+         sitting together. -->
+    <div class="tools">
+      {#if bagSlot && !bagOnRight}
+        <button
+          class="tool"
+          class:on={bagOpen}
+          onclick={toggleBag}
+          aria-pressed={bagOpen}
+          title={bagLabel}
+          aria-label={bagLabel || locale.ui_backpack || 'Backpack'}
+        >
+          <Icon node={Backpack} size="14px" />
+        </button>
+      {/if}
 
-    {#if tidyable}
-      <button
-        class="tidy"
-        onclick={runTidy}
-        disabled={tidying || inv.isBusy}
-        title={locale.ui_tidy_hint || 'Stack and sort. Slots 1-5 stay where they are.'}
-        aria-label={locale.ui_tidy || 'Tidy'}
-      >
-        <Icon node={ArrowDownAZ} size="14px" />
-      </button>
-    {/if}
+      {#if container}
+        <button
+          class="tool dismiss"
+          onclick={() => fetchNui('closeContainer')}
+          aria-label={locale.ui_close || 'Close'}
+        >
+          <Icon node={X} size="14px" />
+        </button>
+      {/if}
+
+      {#if tidyable}
+        <button
+          class="tool"
+          onclick={runTidy}
+          disabled={tidying || inv.isBusy}
+          title={locale.ui_tidy_hint || 'Stack and sort. Slots 1-5 stay where they are.'}
+          aria-label={locale.ui_tidy || 'Tidy'}
+        >
+          <Icon node={ArrowDownAZ} size="14px" />
+        </button>
+      {/if}
+    </div>
 
     {#if inventory.maxWeight}
       <p class="weight" class:heavy={strain === 'heavy'} class:over={strain === 'over'}>
@@ -306,6 +383,7 @@
   <div
     class="grid slot-grid"
     class:stalled={stalled || tidying}
+    style:--grid-rows={gridRows}
     style:pointer-events={inv.isBusy || tidying ? 'none' : 'auto'}
   >
     {#each visible as item (item.slot)}
@@ -372,25 +450,39 @@
     white-space: nowrap;
   }
 
-  .tidy {
+  .tools {
+    flex: none;
+    display: flex;
+    align-self: center;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+  }
+
+  .tool {
     flex: none;
     display: flex;
     padding: 3px;
-    margin-left: auto;
     border-radius: var(--radius-sm);
     color: var(--color-dim);
     transition: color var(--dur-fast) var(--ease-out);
   }
 
-  .tidy:hover:not(:disabled) {
+  .tool:hover:not(:disabled) {
     color: var(--color-primary);
   }
 
-  .tidy:disabled {
+  .tool:disabled {
     opacity: 0.4;
   }
 
-  /* Same shape as the tidy button beside it, but this one shuts the pane rather than
+  /* The bag button is a toggle, so it says which way it is set rather than only reacting
+     to the cursor. */
+  .tool.on {
+    color: var(--color-primary);
+  }
+
+  /* Same shape as the buttons beside it, but this one shuts the pane rather than
      rearranging it, so it takes the danger colour on hover instead of the accent. */
   .dismiss:hover:not(:disabled) {
     color: var(--color-danger);

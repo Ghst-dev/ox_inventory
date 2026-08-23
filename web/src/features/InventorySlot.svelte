@@ -290,12 +290,27 @@
   }
 
   /*
-   * In hand right now. A left edge rather than a full border: the slot already uses its
-   * border for drag states, and a marker that competes with those is a marker that hides
-   * the one telling you whether a drop will be accepted.
+   * In hand right now, said on the strip that already names the item.
+   *
+   * Not on the tile's edge. The border is the drag layer's — accept is a dashed accent
+   * border, refuse is a dashed red one — and a permanent accent marker anywhere near it
+   * competes with the one thing a slot has to be able to say while you are dragging. The
+   * name strip is the only part of the tile that is never spoken for, so the mark goes
+   * there and the tooltip's "Equipped" line agrees with it.
+   *
+   * Tinted over the strip's own translucent ground rather than replacing it: the strip
+   * sits on top of the item art, and an opaque background would black the weapon out
+   * behind its own label. See the note on --primary-glow in tokens.css for why a tint is
+   * composited rather than assigned.
    */
-  .equipped {
-    box-shadow: inset 3px 0 0 var(--color-primary);
+  .equipped .label {
+    background: color-mix(
+      in srgb,
+      var(--color-primary) 20%,
+      color-mix(in srgb, var(--color-bg) 70%, transparent)
+    );
+    color: var(--color-primary);
+    font-weight: var(--font-weight-medium);
   }
 
   /*

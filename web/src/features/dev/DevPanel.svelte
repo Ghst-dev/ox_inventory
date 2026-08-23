@@ -48,6 +48,36 @@
   const openWith = (right: unknown) =>
     send('setupInventory', { leftInventory: fixtures.player, rightInventory: right });
 
+  /**
+   * The bag pane, and the two callbacks that drive it.
+   *
+   * In game the pane is a *reply*: the header button posts `openContainer`, client.lua
+   * asks the server for the bag and pushes `setupContainer` back. Mocking both halves is
+   * what makes the button testable here — without them it posts into the void and the
+   * pane never appears, which reads as a broken button rather than a missing harness.
+   */
+  const backpack = {
+    id: 'container-bag1',
+    type: 'container',
+    label: 'Backpack',
+    slots: 20,
+    maxWeight: 20000,
+    items: fixtures.backpack,
+  };
+
+  const openBackpack = () => send('setupContainer', backpack);
+  const closeBackpack = () => send('setupContainer', false);
+
+  nuiMocks.openContainer = () => {
+    openBackpack();
+    return 1;
+  };
+
+  nuiMocks.closeContainer = () => {
+    closeBackpack();
+    return 1;
+  };
+
   /* ---- server behaviour switches ------------------------------------------ */
 
   // These change what the *mocked server* does, which is the only way to reach the
@@ -129,19 +159,8 @@
       'Elsewhere',
       [
         ['Hotbar', () => send('toggleHotbar')],
-        [
-          'Backpack',
-          () =>
-            send('setupContainer', {
-              id: 'container-bag1',
-              type: 'container',
-              label: 'Backpack',
-              slots: 20,
-              maxWeight: 20000,
-              items: fixtures.backpack,
-            }),
-        ],
-        ['Close backpack', () => send('setupContainer', false)],
+        ['Backpack', openBackpack],
+        ['Close backpack', closeBackpack],
         ['Notify added', notifyAdd],
         ['Notify removed', notifyRemove],
       ],
