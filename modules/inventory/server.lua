@@ -1735,10 +1735,24 @@ lib.callback.register('ox_inventory:swapItems', function(source, data)
 	local function sideFor(invType)
 		if invType == 'player' then return playerInventory end
 
-		if invType == 'container' and playerInventory.containerSlot then
-			local container = Inventory.GetContainerFromSlot(playerInventory, playerInventory.containerSlot)
+		--[[
+			A container resolves through containerSlot or not at all.
 
-			if container then return container end
+			Falling through to `Inventory(playerInventory.open)` here was quietly
+			destructive: with nothing else open, `open` is the player's *own* id, so a
+			`container` side with no bag behind it resolved to the player's own inventory
+			and the move happened between two of their own slots. The client had already
+			drawn the item into the bag pane it thought it was filling, so the item
+			appeared to be in two places — a bug that was only ever visible, but looked
+			exactly like a duplication exploit.
+
+			Refusing is the honest answer: nil here reaches the guard below, which tells
+			the UI to put the item back.
+		]]
+		if invType == 'container' then
+			if not playerInventory.containerSlot then return end
+
+			return Inventory.GetContainerFromSlot(playerInventory, playerInventory.containerSlot)
 		end
 
 		return Inventory(playerInventory.open)
@@ -1748,6 +1762,11 @@ lib.callback.register('ox_inventory:swapItems', function(source, data)
 	local fromInventory = sideFor(data.fromType)
 
 	if not fromInventory or not toInventory then
+		-- A container side that cannot be resolved means the client is showing a bag pane
+		-- the server has already forgotten. Refuse the move, but leave the window alone:
+		-- closing everything over a stale pane is a heavier answer than the mistake.
+		if data.fromType == 'container' or data.toType == 'container' then return false end
+
 		playerInventory:closeInventory()
 		return
 	end
