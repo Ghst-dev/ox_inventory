@@ -200,18 +200,7 @@
    * rather than a mark that never leaves.
    */
   .pulsed {
-    animation: pulse var(--dur-slow, 240ms) var(--ease-out) 3;
-  }
-
-  @keyframes pulse {
-    from {
-      outline: 2px solid var(--color-action);
-      outline-offset: -2px;
-    }
-    to {
-      outline: 2px solid transparent;
-      outline-offset: -2px;
-    }
+    animation: ghst-pulse-outline var(--dur-slow, 240ms) var(--ease-out) 3;
   }
 
   .key {

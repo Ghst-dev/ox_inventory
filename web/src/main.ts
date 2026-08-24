@@ -24,6 +24,11 @@ if (import.meta.env.DEV && isEnvBrowser()) {
   // NUI pages are transparent by design, which makes them invisible against a white
   // page during `pnpm dev`.
   document.documentElement.classList.add('nui-browser');
+  // Dynamic import inside the DEV guard so Rollup drops the backdrop from production
+  // bundles rather than shipping a rule that can never match. `import.meta.env.DEV` is
+  // replaced with a literal at build time; a runtime check alone cannot prove it dead.
+  void import('./features/dev/backdrop.css');
+
 
   // The mock table, reachable from the console for anything the drawer does not cover.
   // The drawer owns the two switches that matter (refuse / delay); this is the escape

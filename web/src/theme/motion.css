@@ -1,0 +1,41 @@
+/*
+ * THE ANIMATION LAYER — every keyframe the inventory draws, declared once.
+ *
+ * There is one today. The file exists anyway, for the same reason the other resources have it:
+ * Svelte scopes `@keyframes` declared inside a component's `<style>` and rewrites the
+ * `animation:` shorthand to match, so a keyframe written there is private to that component
+ * whether or not anything else needs it. The second component that wants to flash a slot would
+ * have written its own copy, which is exactly how ghst_hud ended up with five spellings of one
+ * pulse. Declared out here it is neither scoped nor rewritten, and anything can reach it.
+ *
+ * The `ghst-` prefix is the house convention. It earns its keep in this resource in particular:
+ * `@source './'` makes Tailwind generate a utility for any bare word used as a class name, and
+ * the same instinct that writes `class="ring"` writes `@keyframes pulse`.
+ *
+ * REDUCED MOTION is capped once in base.css for the whole document — under the OS media query,
+ * and again under `[data-reduce-motion]`, which this resource's settings panel drives.
+ */
+
+/*
+ * The change mark: a slot outlines itself and fades the outline away, three times, when its
+ * contents change under the player rather than because they moved something.
+ *
+ * An **outline** rather than a border, so nothing reflows — a border would resize the slot and
+ * shove the whole hotbar sideways. And an **animation** rather than a transition, so it ends on
+ * its own: base.css flattens `animation-duration` under reduced motion, which turns this into no
+ * mark at all, where a transition would leave a mark that never goes away.
+ *
+ * Both keyframes carry `outline-offset`, and they have to: an outline animating only its colour
+ * still needs the offset held, or it snaps outward to the default on the first frame.
+ */
+@keyframes ghst-pulse-outline {
+  from {
+    outline: 2px solid var(--color-action);
+    outline-offset: -2px;
+  }
+
+  to {
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+  }
+}

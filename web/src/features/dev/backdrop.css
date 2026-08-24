@@ -1,0 +1,25 @@
+/*
+ * The browser's stand-in for the game, for `pnpm dev`.
+ *
+ * This page is a transparent overlay, so outside the game it draws over a blank white
+ * page -- and light text on translucent panels looks fine on white and is unreadable on
+ * the thing it will actually sit on. This gives the preview something to be designed
+ * against.
+ *
+ * Dev-only in the strict sense: `main.ts` imports this file behind `import.meta.env.DEV`
+ * with a dynamic import, the same trick DevPanel uses, so Rollup drops the rule from
+ * production bundles instead of shipping CSS that can never match. It was previously in
+ * app.css, which shipped it.
+ *
+ * `.nui-browser` is put on <html> by main.ts, in the browser only, so this cannot leak
+ * in-game even if the rule did ship. That guard is load-bearing: a background on this
+ * page in-game is a rectangle covering the world that the player cannot dismiss.
+ */
+
+.nui-browser body {
+  background:
+    radial-gradient(ellipse 50% 40% at 18% 12%, #4a6fa5 0%, transparent 60%),
+    radial-gradient(ellipse 40% 50% at 78% 22%, #b5764a 0%, transparent 62%),
+    radial-gradient(ellipse 60% 40% at 60% 85%, #2e5a46 0%, transparent 60%),
+    linear-gradient(160deg, #1a2130 0%, #0f1218 55%, #14100c 100%);
+}

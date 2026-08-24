@@ -96,15 +96,20 @@
   }
 
   /*
-   * The same, asked for explicitly in the settings panel rather than by the OS.
+   * The same, asked for explicitly rather than by the OS.
    *
    * Worth having separately: a player can be fine with motion everywhere else on their
-   * machine and still not want an inventory sliding about while they are being shot at,
-   * and a lot of gaming machines never have the OS preference set at all.
+   * machine and still not want a panel sliding about while they are being shot at, and a
+   * lot of gaming machines never have the OS preference set at all.
    *
-   * This reaches CSS transitions and animations only. Svelte's fly/fade/scale are JS
-   * transitions driven by rAF and are unaffected — they would each have to take their
-   * duration from the setting. They are all under 200ms, so the CSS half is most of it.
+   * This is a CONTRACT, not dead CSS -- it does nothing until the resource sets the
+   * attribute. `ox_inventory` drives it from its settings panel:
+   *
+   *     document.documentElement.toggleAttribute('data-reduce-motion', on);
+   *
+   * Reaches CSS transitions and animations only. Svelte's fly/fade/scale are JS
+   * transitions driven by rAF and are unaffected -- they would each have to take their
+   * duration from the setting.
    */
   :root[data-reduce-motion] *,
   :root[data-reduce-motion] *::before,
