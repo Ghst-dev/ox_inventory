@@ -21,11 +21,11 @@
 
 import { onDrop } from './actions';
 import { categoryOf, categoryRank, slotLabel } from './categories';
-import { canStack, isSlotWithItem } from './helpers';
+import { canStack, isSlotWithItem, paneOf } from './helpers';
 import { inv } from './inventory.svelte';
 import { isPinned } from './pins.svelte';
 import { items as itemDefs } from './state.svelte';
-import { InventoryType, type Inventory, type Slot } from '../typings';
+import type { Inventory, Slot } from '../typings';
 
 /**
  * The ceiling on moves for one press.
@@ -54,8 +54,17 @@ export interface TidyResult {
   stalled: boolean;
 }
 
-const paneFor = (type: string): Inventory =>
-  type === InventoryType.PLAYER ? inv.leftInventory : inv.rightInventory;
+/**
+ * The pane a wire type refers to — `helpers.paneOf`, not a local guess.
+ *
+ * What the local guess cost: it read "player" as the left pane and *everything else* as the
+ * right one, which predates the bag pane entirely. Tidy is offered on the bag (it is not a
+ * catalogue, so `tidyable` is true for it), so pressing it there planned a merge and a sort
+ * from the **stash's** contents and then issued those moves through `onDrop`, which resolves
+ * `container` correctly to the bag. One arbitrary slot in the bag moved, the check below
+ * noticed the stash had not changed, and the run stopped as `stalled`.
+ */
+const paneFor = (type: string): Inventory => paneOf(inv, type);
 
 /** Category first, then the label as it is written on the slot, then bigger stacks first. */
 function order(a: Slot, b: Slot): number {

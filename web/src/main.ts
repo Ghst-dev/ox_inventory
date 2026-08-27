@@ -3,11 +3,16 @@ import App from './App.svelte';
 import { debugData, isEnvBrowser } from './lib/nui';
 import { nuiMocks } from './lib/mocks';
 import { publishScrollbarWidth } from './lib/scrollbar';
+import { listenForPrefs } from './lib/prefs.svelte';
 import './app.css';
 
 // Before mount: the pane width and the grid's negative margin both depend on this, and
 // measuring it after the first pane renders would show a frame of the wrong layout.
 publishScrollbarWidth();
+
+// Before mount, so the first frame is drawn at the player's interface size rather than
+// snapping to it a moment later. `ghst_prefs` owns the values; see lib/prefs.svelte.ts.
+listenForPrefs();
 
 const app = mount(App, { target: document.getElementById('root')! });
 

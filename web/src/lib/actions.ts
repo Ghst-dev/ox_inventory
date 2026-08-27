@@ -24,6 +24,22 @@ import { items as itemDefs } from './state.svelte';
 import { openGivePicker, type GiveTarget } from './ui.svelte';
 
 /**
+ * Is this bag the one whose contents are on screen?
+ *
+ * BOTH PANES, NOT JUST THE RIGHT ONE. A bag can be showing as the right-hand pane (opened with
+ * the inventory shut) or as the third pane under the player's own (opened with it up), and this
+ * only ever asked the first. So the bag in the third pane could be dragged to another slot —
+ * and the server's `containerSlot`, which is how every `container` move resolves, went on
+ * naming the slot it used to be in. The next drop into the pane then either landed in whatever
+ * bag had taken that slot or raised, depending on what was sitting there.
+ *
+ * The server refuses the same move now (`swapItems` checks `containerSlot`); this is the half
+ * that refuses it *visibly*, before the item appears to move.
+ */
+const isOpenBag = (containerId: unknown): boolean =>
+  containerId === inv.rightInventory.id || containerId === inv.containerInventory?.id;
+
+/**
  * Move an item between slots, or to the other pane when no target is given.
  *
  * The no-target call is the ctrl+click quick-move: the destination is chosen by
@@ -56,7 +72,7 @@ export function onDrop(
       return console.log(`Cannot store container ${sourceSlot.name} inside another container`);
 
     // Moving the bag you are currently looking inside of would orphan the open pane.
-    if (inv.rightInventory.id === sourceSlot.metadata.container)
+    if (isOpenBag(sourceSlot.metadata.container))
       return console.log(`Cannot move container ${sourceSlot.name} when opened`);
   }
 
@@ -66,10 +82,7 @@ export function onDrop(
 
   if (targetSlot === undefined) return console.error('Target slot undefined!');
 
-  if (
-    targetSlot.metadata?.container !== undefined &&
-    inv.rightInventory.id === targetSlot.metadata.container
-  )
+  if (targetSlot.metadata?.container !== undefined && isOpenBag(targetSlot.metadata.container))
     return console.log(
       `Cannot swap item ${sourceSlot.name} with container ${targetSlot.name} when opened`,
     );

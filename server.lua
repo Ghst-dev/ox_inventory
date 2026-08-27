@@ -136,6 +136,22 @@ local function openInventory(source, invType, data, ignoreSecurityChecks)
     local left = Inventory(source)
     local right, closestCoords
 
+    --[[
+        The slot a `container` request names, held here rather than written straight onto
+        `left.containerSlot`.
+
+        It used to be assigned the moment the branch was entered, before anything had checked
+        that the slot holds a bag -- and the only path that cleared it again was the one where
+        the slot was empty. A slot holding an ordinary item resolved `Inventory(nil)`, which
+        returns the module table, failed the `right.type ~= invType` check below, logged an
+        exploit and returned *leaving the field set*. Any client could plant one with a single
+        callback, and every later `container` move resolved through it.
+
+        So the field is written once, at the bottom, when the inventory has actually opened.
+        Every `return` between here and there now leaves it alone.
+    ]]
+    local containerSlot
+
     if not left then return end
 
     left:closeInventory(true)
@@ -230,18 +246,19 @@ local function openInventory(source, invType, data, ignoreSecurityChecks)
                 end
             end
         elseif invType == 'container' then
-            left.containerSlot = data --[[@as number]]
-            data = left.items[data]
+            containerSlot = data --[[@as number]]
+            data = left.items[containerSlot]
 
-            if data then
+            -- `size` is checked alongside `container` because Create indexes it, and a slot
+            -- that carries one without the other is a saved item older than the container
+            -- system. Neither is worth an error.
+            if data?.metadata?.container and data.metadata.size then
                 right = Inventory(data.metadata.container)
 
                 if not right then
                     right = Inventory.Create(data.metadata.container, data.label, invType, data.metadata.size[1], 0,
                         data.metadata.size[2], false)
                 end
-            else
-                left.containerSlot = nil
             end
         else
             right = Inventory(data)
@@ -269,7 +286,7 @@ local function openInventory(source, invType, data, ignoreSecurityChecks)
             inventoryType = right.type,
         }
 
-        if invType == 'container' then hookPayload.slot = left.containerSlot end
+        if invType == 'container' then hookPayload.slot = containerSlot end
 
         if isDataTable and data.netid then hookPayload.netId = data.netid end
 
@@ -291,6 +308,10 @@ local function openInventory(source, invType, data, ignoreSecurityChecks)
 
         if not hooks.success then return end
     end
+
+    -- Claimed only now that everything has agreed to open. `closeInventory` at the top of this
+    -- function already released whatever bag was open before, so there is nothing to let go of.
+    left.containerSlot = containerSlot
 
     left:openInventory(right)
 
@@ -357,6 +378,21 @@ lib.callback.register('ox_inventory:openContainer', function(source, slot)
     -- desync the moment either was written to.
     if container.id == left.open then return end
 
+    --[[
+        ONE BAG AT A TIME, AND THE OLD ONE IS LET GO OF FIRST.
+
+        `containerSlot` is the only handle the server keeps on an open bag, so overwriting it
+        used to strand the previous one: `openedBy[source]` stayed set and `open` stayed true
+        for the rest of the session, and syncSlotsWithClients went on pushing that bag's slots
+        at a player whose UI could no longer place them -- they landed in the right-hand pane,
+        so a stash appeared to grow rows out of a bag nobody had open.
+
+        The client refuses to show two bags for a related reason: `container` is a *type* on
+        the wire, and two panes wearing it are two panes the resolvers cannot tell apart. See
+        client.openContainer.
+    ]]
+    left:releaseContainer()
+
     left.containerSlot = slot
     container.openedBy[source] = true
     container:set('open', true)
@@ -377,15 +413,7 @@ lib.callback.register('ox_inventory:closeContainer', function(source)
 
     if not left or not left.containerSlot then return end
 
-    local item = left.items[left.containerSlot]
-    local container = item?.metadata?.container and Inventory(item.metadata.container)
-
-    if container then
-        container.openedBy[source] = nil
-        container:set('open', false)
-    end
-
-    left.containerSlot = nil
+    left:releaseContainer()
 
     return true
 end)

@@ -354,6 +354,7 @@
   }
 
   .detach:hover {
+    border-color: rgba(255, 80, 80, 0.45);  /* CEF 103 has no color-mix() -- see theme/base.css */
     border-color: color-mix(in srgb, var(--color-danger) 45%, transparent);
     color: var(--color-danger);
   }

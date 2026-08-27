@@ -9,6 +9,39 @@ local Inventories = {}
 local OxInventory = {}
 OxInventory.__index = OxInventory
 
+--[[
+    Let go of the bag a player has open beside the main pane, if there is one.
+
+    ONE PLACE, BECAUSE THERE ARE FOUR CALLERS AND THEY ALL USED TO FORGET. `containerSlot` is
+    written by `openInventory` (the bag as the right-hand pane) and by the `openContainer`
+    callback (the bag as the third pane), and until this existed only the *close* paths ever
+    cleared it -- so opening a second bag overwrote the field and left the first one with
+    `openedBy[playerId]` set and `open` true for the rest of the session. syncSlotsWithClients
+    then kept pushing that bag's slots at a player whose UI could not match the id to a pane,
+    and wrote them into the right-hand pane instead: a stash visibly gaining rows from a bag
+    nobody had open.
+
+    Looked up rather than fetched through GetContainerFromSlot, which creates the inventory
+    when it is missing -- creating one in order to close it is absurd.
+
+    @param self OxInventory the player
+]]
+function OxInventory:releaseContainer()
+    local slot = self.containerSlot
+
+    if not slot then return end
+
+    self.containerSlot = nil
+
+    local item = self.items[slot]
+    local container = item?.metadata?.container and Inventories[item.metadata.container]
+
+    if not container then return end
+
+    container.openedBy[self.id] = nil
+    container:set('open', false)
+end
+
 ---Open a player's inventory, optionally with a secondary inventory.
 ---@param inv? inventory
 function OxInventory:openInventory(inv)
@@ -37,30 +70,13 @@ function OxInventory:closeInventory(noEvent)
         inv:set('open', false)
     end
 
-    --[[
-        A container opened *alongside* the main pane is released here too.
-
-        `self.open` is cleared below and that is what the rest of this file keys off, but a
-        container reached through containerSlot is not in `self.open` — so without this its
-        openedBy entry outlives the window, and syncSlotsWithClients keeps pushing slot
-        updates to a player who walked away from the bag ten minutes ago.
-
-        Looked up rather than fetched through GetContainerFromSlot: that helper creates the
-        inventory when it is missing, and creating one in order to close it is absurd.
-    ]]
-    if self.containerSlot then
-        local item = self.items[self.containerSlot]
-        local container = item?.metadata?.container and Inventory(item.metadata.container)
-
-        if container then
-            container.openedBy[self.id] = nil
-            container:set('open', false)
-        end
-    end
+    -- A container opened *alongside* the main pane is released here too: `self.open` is what
+    -- the rest of this file keys off, and a bag reached through containerSlot is not in it.
+    -- See OxInventory:releaseContainer, which also clears the field.
+    self:releaseContainer()
 
     self.open = false
     self.currentShop = nil
-    self.containerSlot = nil
 
 	if not noEvent then
 		TriggerClientEvent('ox_inventory:closeInventory', self.id, true)
@@ -291,10 +307,37 @@ function Inventory.GetContainerFromSlot(inv, slotId)
 
 	if not slotData then return end
 
-	local container = Inventory(slotData.metadata.container)
+	--[[
+		The slot has to still hold a bag.
+
+		Without this the nil `metadata.container` falls into `Inventory(nil)`, and that call
+		returns the *module table* -- the `__call` metamethod treats a nil argument as "give me
+		the namespace", which is what `getInventory()` relies on. The module table is truthy, so
+		the `if not container` branch below is skipped and this hands a caller something with no
+		`items`, no `id` and no `type`. swapItems then indexes `toInventory.items` and raises.
+
+		Reachable because `containerSlot` outlives the bag it named -- see the callers in
+		swapItems and server.lua. Guarding here as well means a stale slot is refused rather
+		than turned into a script error, whatever finds it.
+	]]
+	local containerId = slotData.metadata?.container
+
+	if not containerId then return end
+
+	-- `Inventory(id)` rather than a raw `Inventories[id]`, as upstream had it: the lookup can
+	-- also load, and whether a container is ever reached that way is not a question this fix
+	-- needs to answer. The guard above is the change; the resolution below is untouched.
+	local container = Inventory(containerId)
 
 	if not container then
-		container = Inventory.Create(slotData.metadata.container, slotData.label, 'container', slotData.metadata.size[1], 0, slotData.metadata.size[2], false)
+		-- Only the *first* look at a bag has to build it, so `size` is required here rather
+		-- than above: an inventory that already exists has long since stopped needing it, and
+		-- refusing one because a saved item predates the field would lose its contents.
+		local size = slotData.metadata.size
+
+		if not size then return end
+
+		container = Inventory.Create(containerId, slotData.label, 'container', size[1], 0, size[2], false)
 	end
 
 	return container
@@ -1772,6 +1815,29 @@ lib.callback.register('ox_inventory:swapItems', function(source, data)
 	end
 
     if data.toType == 'inspect' or data.fromType == 'inspect' then return end
+
+    --[[
+        THE OPEN BAG DOES NOT MOVE.
+
+        `containerSlot` names a slot in the player's own inventory, and everything that
+        resolves a `container` side goes through it -- so a move that empties or overwrites
+        that slot leaves the field naming something else. What that used to cost: swap the
+        open bag with a second bag and the next drop into the pane went into the *other* bag,
+        with the resulting sync carrying an id the UI could not place; swap it with an
+        ordinary item and GetContainerFromSlot raised.
+
+        Refused rather than reconciled. Repointing the field means guessing which slot the bag
+        landed in, and the UI refuses this drag already (`onDrop` in web/src/lib/actions.ts) --
+        this is the half a forged payload meets. Closing the bag first is one click.
+    ]]
+    -- Each side is tested against its own inventory: slot numbers repeat across inventories,
+    -- so "slot 3 of a stash" must not be mistaken for "slot 3 of the player".
+    if playerInventory.containerSlot and (
+        (fromInventory == playerInventory and data.fromSlot == playerInventory.containerSlot) or
+        (toInventory == playerInventory and data.toSlot == playerInventory.containerSlot)
+    ) then
+        return false
+    end
 
     local activeSlots <close> = GetLocks({
        	('inventory-%s:slot-%s'):format(fromInventory.id, data.fromSlot),

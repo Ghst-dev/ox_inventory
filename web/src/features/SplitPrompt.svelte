@@ -159,6 +159,18 @@
     font-family: var(--font-mono);
     font-size: var(--text-sm);
     text-align: center;
+    /* Chromium's number spinner cannot be themed — it stays a pale native control however dark
+       the field around it is — so it goes, the way ghst_hud's NumberField does it. Both
+       properties are needed: the first for the field, the second for the buttons inside it.
+       No chevrons replace them here: the slider and the three presets below already are the
+       adjust affordance, which is why this field is the one place a bare number is enough. */
+    appearance: textfield;
+  }
+
+  .field::-webkit-outer-spin-button,
+  .field::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
   }
 
   .field:focus {
@@ -218,6 +230,7 @@
 
   .confirm:hover {
     /* Tinted over the panel surface rather than filled with the accent — see tokens.css. */
+    background: rgba(20, 46, 50, 0.931);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-panel));
     color: var(--color-action);
   }

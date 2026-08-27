@@ -215,13 +215,34 @@ export interface RefreshPayload {
   slotsData?: { inventoryId: string; slots: number };
 }
 
-/** Which pane an id refers to, or null when it is neither of the two open ones. */
+/** Which pane an id refers to, or null when it is none of the open ones. */
 function paneFor(inventoryId: string): 'leftInventory' | 'rightInventory' | 'containerInventory' | null {
   if (inventoryId === inv.leftInventory.id) return 'leftInventory';
   if (inventoryId === inv.rightInventory.id) return 'rightInventory';
   if (inventoryId === inv.containerInventory?.id) return 'containerInventory';
   return null;
 }
+
+/**
+ * The same question, answered with the pane itself, for callers outside this module.
+ *
+ * Exported so there is one exact id-to-pane lookup rather than one per feature. The two that
+ * were written by hand both stopped at "not player means the right pane", which was true until
+ * the bag became a third pane — see the drag-cancel check in Inventory.svelte.
+ *
+ * Distinct from `helpers.paneOf`, which resolves a wire *type* rather than an id. Both exist
+ * because the wire uses both: a move names types, a refresh names ids.
+ */
+export const paneById = (inventoryId: string | undefined): Inventory | null => {
+  // Lua names the player's own pane with the literal `player` (or with nothing at all) rather
+  // than with its id, so the sentinel is resolved here — a caller that compared ids alone would
+  // silently miss every update to the pane most updates are about.
+  if (!inventoryId || inventoryId === InventoryType.PLAYER) return inv.leftInventory;
+
+  const pane = paneFor(inventoryId);
+
+  return pane ? inv[pane] : null;
+};
 
 export function refreshSlots(payload: RefreshPayload): void {
   if (payload.items) {

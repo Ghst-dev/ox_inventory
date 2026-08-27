@@ -232,6 +232,7 @@
 
   .label {
     padding: 3px 5px;
+    background: rgba(10, 10, 10, 0.7);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 70%, transparent);
     color: var(--color-gray);
     font-size: var(--text-meta);

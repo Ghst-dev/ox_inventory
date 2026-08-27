@@ -294,5 +294,10 @@ export const components: Record<string, ItemData> = {
 export const backpack: SlotWithItem[] = occupied([
   { slot: 2, name: 'bandage', count: 3, weight: 345 },
   { slot: 5, name: 'water', count: 2, weight: 1000 },
+  // `repairkit` on purpose: an item the bag holds and `items` above does not define. Lua
+  // answers that gap with getItemData, which the harness has no Lua to ask -- so this is the
+  // one slot in the fixtures that behaves the way an unknown item really does, and it is why
+  // Tidy reports `stalled` here rather than sorting all three. Anything relying on a
+  // definition should be tested against the two rows above it.
   { slot: 8, name: 'repairkit', count: 1, weight: 2500 },
 ]);

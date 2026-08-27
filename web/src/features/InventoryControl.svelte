@@ -191,6 +191,7 @@
 
   .verb:global([data-dnd-over]) {
     /* Tint over the button's surface, not in place of it — see tokens.css. */
+    background: rgba(20, 46, 50, 0.931);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-panel));
     border-color: var(--color-primary);
     color: var(--color-primary);

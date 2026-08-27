@@ -7,6 +7,83 @@
  * from the Ghostbase base layer (focus ring, selection).
  */
 
+/*
+ * WHICH CHROMIUM. This is the ceiling every stylesheet on the server is written under.
+ *
+ * FiveM's NUI runs a fork of CEF 103 -- Chromium 103, June 2022 -- and the Enhanced build
+ * ships the same browser, because the CEF upgrade was deferred to hold parity with Legacy
+ * while Enhanced is in early access. Assume 103 until `/cefprobe` says otherwise; the probe
+ * is `Scripts/ghst_cefprobe`, and it outranks this comment because a fork can carry
+ * backports that no changelog mentions.
+ *
+ * The trap is that none of this shows up in `pnpm dev`, which runs in a real browser. A
+ * feature above the ceiling renders perfectly in the harness and fails only in the game.
+ *
+ * `color-mix()` IS ABOVE THE CEILING -- it is Chromium 111 -- and it is the one that has
+ * actually bitten. An unknown function does not fall back to something approximate: it makes
+ * the whole declaration invalid, so `background: color-mix(...)` on the game's browser is not
+ * a wrong colour, it is *no background at all*. Roughly thirty declarations across ghst_hud,
+ * ox_lib, ox_inventory and ox_target were in that state.
+ *
+ * So every `color-mix()` carries a plain declaration immediately above it:
+ *
+ *     background: rgba(31, 55, 59, 1);
+ *     background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface-2));
+ *
+ * That is not redundancy, and deleting the first line is a regression. No `@supports` wrapper
+ * is needed either -- invalid-at-parse is precisely the mechanism doing the work. 103 cannot
+ * read the second line and keeps the first; every newer runtime reads both and the second
+ * wins.
+ *
+ * Compute the fallback, do not eyeball it. `color-mix()` composites with PREMULTIPLIED alpha,
+ * so mixing an accent into a translucent surface token gives a result whose alpha is itself
+ * mixed -- a per-channel average of the two is a visibly different colour. Where a colour is
+ * only known at runtime, as the notification badge's `--ring-color` is, there is no value to
+ * precompute: paint it on a pseudo-element with `opacity` instead, which is exact and ancient.
+ *
+ * THE STANDALONE `translate` / `rotate` / `scale` PROPERTIES ARE 104 -- and the game runs them
+ * anyway. That was measured in the client on a real box rather than asked of `CSS.supports`, so it
+ * is not a parsing accident. They are gone from this codebase all the same, and the reason is what
+ * they were doing: a `translate: -50% -50%` is how a dialog centres itself, and the support comes
+ * from a flag nobody promised (see the measurement below). Insurance, not a bug fix -- the
+ * alarming version of this, panels stuck in the corner, never happened.
+ *
+ * That swap costs the thing `translate` was reached for -- it ADDS to an element's own
+ * `transform`, where a keyframe writing `transform` replaces the property outright.
+ * `--transform-base` is the portable form of the same guarantee: an element with a standing
+ * transform declares it under that name and sets `transform: var(--transform-base)`, and every
+ * animation composes on top of `var(--transform-base, translate(0, 0))`. Because that is a var()
+ * substitution rather than an animated value it re-resolves whenever the base changes, which is
+ * how ox_target's hover shift still lands on a row that is mid-arrival.
+ *
+ * MASKS NEED THE PREFIX. Unprefixed `mask-image` is 120; only `-webkit-mask-image` is understood
+ * here. Write both, prefixed first -- the same shape as the `color-mix()` pair above, and for the
+ * same reason: the line this runtime cannot read is the one that gets dropped.
+ *
+ * MEASURED IN GAME, 2026-08-26, and the version number turned out not to be the whole story. The
+ * runtime is Chromium 103.0.5060.134 with experimental web platform features ON, so a run of
+ * things that shipped after 103 work regardless:
+ *
+ *     works    :has() (105) - @container (105) - dvh/svh (108) - translate/rotate/scale (104)
+ *     absent   toSorted (110) - color-mix + oklch (111) - nesting (112) - text-wrap: balance and
+ *              popover (114) - Object.groupBy + @starting-style (117) - relative colour (119) -
+ *              mask-image unprefixed (120) - light-dark() (123)
+ *
+ * The break is clean between 108 and 110, which is exactly what "103 source with the flags on"
+ * looks like: everything already written behind a flag is switched on, and nothing added after
+ * the 103 branch cut exists at all, because no flag can enable code that was never written.
+ *
+ * SO READ THE LINE AS ~108, AND DO NOT RELY ON IT. A flag is unstable by definition -- CfX can
+ * drop it and a CEF bump can change what sits behind it. A 104-108 feature is something that
+ * happens to work today, not something to hang a layout on.
+ *
+ * `text-wrap: balance` (114) is the one absent feature deliberately left in place: ox_inventory
+ * uses it once, on an empty-grid message, and an ignored balance is ordinary wrapping rather than
+ * a broken box. Safe outright, well under the line: `@layer` (99), `@property` (85),
+ * `accent-color` (93), `aspect-ratio` (88), `backdrop-filter` (76), `filter: blur()` (53),
+ * `inset` (87), `:focus-visible` (86).
+ */
+
 @layer base {
   html,
   body {

@@ -135,6 +135,7 @@
 
   .action {
     padding: 3px 5px;
+    background: rgb(15, 54, 60);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-primary) 22%, var(--color-bg));
     color: var(--color-white);
     font-size: var(--text-meta);
@@ -153,23 +154,28 @@
    * a glyph would be competing with the item art for the same 68 pixels.
    */
   .gain {
+    border-color: rgb(51, 116, 87);  /* CEF 103 has no color-mix() -- see theme/base.css */
     border-color: color-mix(in srgb, var(--color-success) 45%, var(--color-border));
   }
 
   .gain .action {
+    background: rgb(24, 61, 44);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-success) 26%, var(--color-bg));
   }
 
   .loss {
+    border-color: rgb(138, 59, 59);  /* CEF 103 has no color-mix() -- see theme/base.css */
     border-color: color-mix(in srgb, var(--color-danger) 45%, var(--color-border));
   }
 
   .loss .action {
+    background: rgb(74, 28, 28);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-danger) 26%, var(--color-bg));
   }
 
   .name {
     padding: 3px 5px;
+    background: rgba(10, 10, 10, 0.7);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 70%, transparent);
     color: var(--color-gray);
     font-size: var(--text-meta);

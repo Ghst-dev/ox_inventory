@@ -8,6 +8,7 @@
     inv,
     refreshSlots,
     setAdditionalMetadata,
+    paneById,
     setupContainer,
     setupInventory,
     type ItemsPayload,
@@ -61,7 +62,7 @@
     /**
      * `play` is called untracked, and that is not a precaution.
      *
-     * It reads settings.volume to decide whether to make a sound at all, so calling it
+     * It reads the shared `uiVolume` preference to decide whether to make a sound at all, so calling it
      * inside the effect body makes the volume a dependency of *this* effect — and
      * dragging the volume slider then replays the open sound on every step. The harness
      * caught it: an open blip appeared in a window where the inventory had not opened.
@@ -123,10 +124,13 @@
     const rewritten = list.some((entry) => {
       if (!entry?.item) return false;
 
-      const pane =
-        entry.inventory && entry.inventory !== 'player' ? inv.rightInventory : inv.leftInventory;
+      // Resolved by id, the way the store's own refreshSlots does it two files away. Reading
+      // "not player" as "the right pane" predates the bag pane, so a server rewrite of the slot
+      // being dragged out of a *bag* never matched — and the drag went on to complete against a
+      // slot whose contents had already changed underneath it.
+      const pane = paneById(entry.inventory);
 
-      return entry.item.slot === held.item.slot && pane.type === held.inventory;
+      return pane !== null && entry.item.slot === held.item.slot && pane.type === held.inventory;
     });
 
     if (rewritten) endDrag();

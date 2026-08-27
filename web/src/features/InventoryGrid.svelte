@@ -629,6 +629,7 @@
 
   .chip.on {
     /* Tinted over the sunken surface rather than painted onto it, per tokens.css. */
+    background: rgba(15, 48, 53, 0.742);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
     border-color: var(--color-primary);
     color: var(--color-primary);
@@ -654,6 +655,10 @@
     text-align: center;
     font-size: var(--text-sm);
     color: var(--color-dim);
+    /* Chromium 114, above the NUI ceiling, and left in deliberately: unread, the line wraps the
+       ordinary way. It is the only above-ceiling declaration in any of these bundles that is not
+       paired with a fallback, because it is the only one whose absence costs nothing. See
+       `theme/base.css`. */
     text-wrap: balance;
   }
 

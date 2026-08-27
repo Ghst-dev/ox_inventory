@@ -2,6 +2,8 @@ if not lib then return end
 
 require 'modules.bridge.client'
 require 'modules.interface.client'
+-- Six lines carrying the shared interface preferences into the page. See the file.
+require 'modules.prefs.client'
 
 local Utils = require 'modules.utils.client'
 local Weapon = require 'modules.weapon.client'
@@ -120,6 +122,27 @@ function client.openContainer(slot)
     -- Using the bag that is already open closes it, the same way re-opening a stash does.
     if currentContainer and currentContainer.slot == slot then
         return client.closeContainer()
+    end
+
+    --[[
+        NEVER TWO CONTAINER PANES.
+
+        A bag opened with the inventory shut becomes the right-hand pane; a bag opened with it
+        up becomes this third one. Both report `type = 'container'` to the page, and the page
+        resolves a wire type to a pane -- so with one of each, a drag out of the right-hand bag
+        was resolved against the third one and the wrong bag lost the item. Client and server
+        agreed on the wrong answer, so nothing snapped back and nothing errored.
+
+        The server has the same single-mindedness for its own reasons: `containerSlot` is one
+        field, so it can only ever address the bag opened last.
+
+        Handing this case to `openInventory` keeps one bag on screen and keeps it the one the
+        player just asked for -- the new bag replaces the right-hand pane, which is exactly
+        what using a bag does when the window is shut. Refusing instead would be a keypress
+        that silently does nothing.
+    ]]
+    if currentInventory.type == 'container' then
+        return client.openInventory('container', slot)
     end
 
     local container = lib.callback.await('ox_inventory:openContainer', false, slot)
@@ -327,6 +350,12 @@ function client.openInventory(inv, data)
     if client.screenblur then Utils.blurIn() end
     Utils.previewIn()
 
+    -- A window that reopens has no bag pane: the page's setupInventory clears it, the server's
+    -- closeInventory releases it, and this is the client's copy of the same fact. Left stale it
+    -- made the bag button dead -- the page believed no bag was open and asked for one, this
+    -- believed the same bag was open and closed it, so the two cancelled out.
+    currentContainer = nil
+
     currentInventory = right or defaultInventory
     left.items = PlayerData.inventory
     left.groups = PlayerData.groups
@@ -384,6 +413,12 @@ RegisterNetEvent('ox_inventory:forceOpenInventory', function(left, right)
 
 	if client.screenblur then Utils.blurIn() end
 	Utils.previewIn()
+
+	-- A window that reopens has no bag pane: the page's setupInventory clears it, the server's
+	-- closeInventory releases it, and this is the client's copy of the same fact. Left stale it
+	-- made the bag button dead -- the page believed no bag was open and asked for one, this
+	-- believed the same bag was open and closed it, so the two cancelled out.
+	currentContainer = nil
 
 	currentInventory = right or defaultInventory
 	currentInventory.ignoreSecurityChecks = true
@@ -1687,6 +1722,12 @@ RegisterNetEvent('ox_inventory:viewInventory', function(left, right)
 
 	if client.screenblur then Utils.blurIn() end
 	Utils.previewIn()
+
+	-- A window that reopens has no bag pane: the page's setupInventory clears it, the server's
+	-- closeInventory releases it, and this is the client's copy of the same fact. Left stale it
+	-- made the bag button dead -- the page believed no bag was open and asked for one, this
+	-- believed the same bag was open and closed it, so the two cancelled out.
+	currentContainer = nil
 
 	currentInventory = right or defaultInventory
 	currentInventory.ignoreSecurityChecks = true

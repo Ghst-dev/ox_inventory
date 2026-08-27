@@ -30,6 +30,28 @@
  * inside a Svelte <style> block would resolve to nothing. `static` emits all of
  * them — this is a palette meant to be read both ways.
  */
+/*
+ * THE ONE RUNTIME VALUE IN THIS FILE, and the reason it is not in `@theme` below: `--ui-scale` is
+ * written by JavaScript, on the document element, from a player preference that `ghst_prefs` owns
+ * (see `lib/prefs.svelte.ts`). Everything in `@theme` is a constant the designer chose; this is a
+ * number the player chose, and the two do not belong in the same block.
+ *
+ * `--ui-px` is the unit the type scale is expressed in. The idea is lifted from `ghst_hud`, which
+ * has had a player-adjustable `--px` since it was written while the other ten UIs were fixed
+ * pixels -- so the same panel was a wall at 720p and a postage stamp at 4K. The argument against
+ * fixed pixels was already written out at length in ox_inventory's own stylesheet; it just stopped
+ * at slot size and never reached type.
+ *
+ * DELIBERATELY NOT CALLED `--px`. ghst_hud already owns that name inside `.hud`, where it means
+ * "one HUD pixel at the player's *HUD* scale" and carries a per-cluster factor as well. Two
+ * different numbers under one name, one of them shadowing the other in a subtree, is the kind of
+ * thing that works until somebody moves an element between two parents.
+ */
+:root {
+  --ui-scale: 1;
+  --ui-px: calc(var(--ui-scale, 1) * 1px);
+}
+
 @theme static {
   /* ---- Type -------------------------------------------------------------
      Inter if the machine has it, system stack otherwise. The site pulls Inter
@@ -47,14 +69,20 @@
   --font-weight-extrabold: 800;
 
   /* One step down from the site's scale. Its 16px body is sized for reading a
-     page; an overlay is glanced at while driving and competes with the HUD. */
-  --text-meta: 10px;
-  --text-label: 11px;
-  --text-sm: 13px;
-  --text-base: 15px;
-  --text-subheading: 16px;
-  --text-heading: 22px;
-  --text-display: 30px;
+     page; an overlay is glanced at while driving and competes with the HUD.
+
+     Expressed in `--ui-px` rather than in `px`, so the whole scale answers the player's
+     interface-size preference at once. The numbers are unchanged: at the default scale of 1 this
+     computes to exactly what it always was. Sizes that are deliberately NOT type -- a hairline, a
+     radius, an icon box -- stay in real pixels, because a 1px rule that scales is a 1.5px rule
+     that no longer reads as a hairline. */
+  --text-meta: calc(10 * var(--ui-px));
+  --text-label: calc(11 * var(--ui-px));
+  --text-sm: calc(13 * var(--ui-px));
+  --text-base: calc(15 * var(--ui-px));
+  --text-subheading: calc(16 * var(--ui-px));
+  --text-heading: calc(22 * var(--ui-px));
+  --text-display: calc(30 * var(--ui-px));
 
   --leading-tight: 1.05;
   --leading-heading: 1.2;

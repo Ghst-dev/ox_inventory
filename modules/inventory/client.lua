@@ -56,22 +56,39 @@ function Inventory.CanAccessTrunk(entity)
 
     if IsEntityDead(entity) then return end
 
-    --- A locked car has a locked boot. **Ghst-dev change**, and the one that made the keys
-    --- mechanic mean anything: upstream checks the class, the storage data, that the door
-    --- exists and that you are within reach, and never asks whether the vehicle is locked --
-    --- so a car nobody could start was a car anybody could empty, and cargo is what most
-    --- theft is actually for. The glovebox needs no such line: reaching it means sitting in
-    --- the driver's seat, which the lock already governs.
+    --- A locked car has a locked boot. **Ghst-dev change**: upstream checks the class, the
+    --- storage data, that the door exists and that you are within reach, and never asks whether
+    --- the vehicle is locked -- so the prompt appeared on every car, including the ones
+    --- `server.lua` was about to refuse. The glovebox needs no such line: reaching it means
+    --- sitting in the driver's seat, which the lock already governs.
     ---
-    --- The statebag rather than `exports.ghst_vehiclekeys:IsAccessible`: `doorslockstate` is
-    --- replicated to every client, so this costs no round trip and no export call, and a
-    --- world vehicle nobody has tried yet has no state at all -- which reads as unlocked and
-    --- leaves upstream's behaviour exactly as it was until somebody decides otherwise.
+    --- THIS IS THE PROMPT, NOT THE GATE. `openInventory`'s trunk branch on the server has
+    --- always tested `GetVehicleDoorLockStatus` and answered `vehicle_locked`, so a locked boot
+    --- was never actually lootable. What this decides is whether the player is offered
+    --- something that will work -- which is why it has to reach the *same* answer the server
+    --- will, rather than a cheaper one.
     ---
-    --- 2 is locked, in GTA's numbering and in ghst_vehiclekeys'. Keys are not consulted on
-    --- purpose: the owner unlocks the car and then opens the boot, which is one press more
-    --- and the same press a thief needs.
-    if Entity(entity).state.doorslockstate == 2 then return end
+    --- Read here rather than through `exports.ghst_vehiclekeys:IsAccessible`: `doorslockstate`
+    --- is replicated to every client, so this costs no round trip and no export call, and no
+    --- dependency on that resource being started.
+    ---
+    --- THE STATEBAG FIRST, THE NATIVE BEHIND IT. A world vehicle has no lock state until
+    --- somebody tries a door, and testing the bag raw read every untouched car as unlocked --
+    --- so the boot prompt appeared on cars the server then refused with `vehicle_locked`
+    --- (server.lua's trunk branch has always checked the native). A prompt that lies is worse
+    --- than no prompt. `ghst_vehiclekeys` documents this exact trap in `GhstKeys.lockState`,
+    --- where reading "not 2" as unlocked made a lockpick report a car it had never rolled for.
+    ---
+    --- The rule is the server's, verbatim: 0 is no lock, 1 unlocked, 8 boot unlocked, and
+    --- everything else -- 2, 3, 4, 7, 10 -- is locked. `== 2` alone missed five of them; that
+    --- was safe only because ghst_vehiclekeys writes nothing but 1 and 2, which stops being
+    --- true the moment the native answers instead.
+    ---
+    --- Keys are not consulted on purpose: the owner unlocks the car and then opens the boot,
+    --- which is one press more and the same press a thief needs.
+    local lockState = Entity(entity).state.doorslockstate or GetVehicleDoorLockStatus(entity)
+
+    if lockState > 1 and lockState ~= 8 then return end
 
     local vehicleHash = GetEntityModel(entity)
     local vehicleClass = GetVehicleClass(entity)

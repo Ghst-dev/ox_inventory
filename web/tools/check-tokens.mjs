@@ -2,6 +2,8 @@
  * Fails on a `var(--x)` with no fallback that nothing in src declares, and on any `var()` in a
  * markup attribute. Declarations are a CSS rule, an inline style, or Svelte's `style:--x`
  * directive; `var(--x, 1)` is a contract with an ancestor and is deliberately allowed.
+ *
+ * Comments are not scanned. See `mask` below for why that had to be said out loud.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -29,8 +31,25 @@ const used = new Map();
  */
 const inAttribute = [];
 
+/**
+ * Comments blanked to spaces of the same length, so every line number stays exact.
+ *
+ * Prose is not code, and this scanner used to read it as code. The CEF ceiling note in
+ * `theme/base.css` documents `--transform-base` by name -- it writes `var(--transform-base)` in a
+ * sentence -- and every resource carrying that note was reported as using a property it never
+ * declares. The same blindness ran the other way and mattered more: a `--x:` written inside a
+ * comment counted as a *declaration*, so a token that was only ever described and never set
+ * passed the gate this file exists to be.
+ *
+ * Block and HTML comments only. A `//` line comment is left alone on purpose: it cannot be told
+ * from the `//` in a URL without parsing, and no comment style but these two has ever held a
+ * `var()` here.
+ */
+const mask = (text) =>
+  text.replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, ' '));
+
 for (const file of files) {
-  const source = readFileSync(file, 'utf8');
+  const source = mask(readFileSync(file, 'utf8'));
 
   const markup = source.split('<style')[0];
 

@@ -13,8 +13,9 @@
 
 import { nuiMocks } from './mocks';
 
-// Capture the real fetch before it is taken away below.
-const realFetch = window.fetch;
+// Capture the real fetch before it is taken away below. Bound, because the guard installed
+// below hands it back out and a detached `fetch` is not guaranteed to accept a bare call.
+const realFetch = window.fetch.bind(window);
 
 /** True when running in a normal browser rather than the game's CEF instance. */
 export const isEnvBrowser = (): boolean => !(window as any).invokeNative;
@@ -23,16 +24,57 @@ export const isEnvBrowser = (): boolean => !(window as any).invokeNative;
  * Kept from the React implementation: once the page has what it needs, remove its
  * ability to make arbitrary network requests, so a compromised NUI page cannot phone
  * home. Only applied in game — nulling these in a browser breaks Vite's dev client.
+ *
+ * **Refused by origin, not wholesale.** The React version assigned `() => {}`, which
+ * returns `undefined` rather than a promise, so anything reaching for the global instead
+ * of `fetchNui` below died on `.then` of undefined. That is not hypothetical:
+ * `lib/prefs.svelte.ts` is copied into every ghst UI and uses bare `fetch` deliberately,
+ * because it cannot depend on a helper whose name differs in each one. `main.ts` imports
+ * this module first, so prefs only ever saw the stub — the preferences handshake has never
+ * once completed in either fork, and both pages threw on load.
+ *
+ * A POST at this page's own resource is the NUI callback channel, not a way out, so the
+ * ban is on everything else. Refusals reject with the `TypeError` a blocked request
+ * produces, which is what callers already catch; a stub that breaks the promise contract
+ * is how this stayed invisible for so long.
  */
 if (!isEnvBrowser()) {
-  // @ts-expect-error deliberately removing the global
-  window.fetch = () => {};
-  // @ts-expect-error deliberately removing the global
-  window.XMLHttpRequest = window.fetch;
+  window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    let origin: string | null = null;
+
+    try {
+      origin = new URL(input instanceof Request ? input.url : String(input), location.href).origin;
+    } catch {
+      /* Unparseable is not same-origin. */
+    }
+
+    if (origin !== location.origin) return Promise.reject(new TypeError('Failed to fetch'));
+
+    return realFetch(input as RequestInfo, init);
+  }) as typeof fetch;
+
+  // XHR gets no such carve-out — nothing in either fork uses it, so it stays gone. Its own
+  // stub rather than an alias of the above, which would now hand back a working fetch under
+  // a name that is meant to be dead.
+  window.XMLHttpRequest = function () {
+    throw new TypeError('XMLHttpRequest is disabled in NUI');
+  } as unknown as typeof XMLHttpRequest;
 }
 
-/** Resource name, used to address the NUI callback endpoint. */
-const resourceName = (): string => (window as any).GetParentResourceName?.() ?? 'nui-frame-app';
+/**
+ * The host the NUI callback endpoint answers on.
+ *
+ * **The page's own hostname first**, which is `cfx-nui-ox_inventory` — not the bare resource
+ * name `GetParentResourceName` returns. Both are routed to this resource, so the swap changes
+ * nothing about where a callback lands; what it changes is that every request the page makes is
+ * now *same-origin*, which is what lets `index.html` declare `connect-src 'self'` and have the
+ * browser enforce the rule the guard above only asks for politely. `ox_target/web/src/lib/nui.ts`
+ * reached the same conclusion first and has been running on it.
+ *
+ * `GetParentResourceName` is kept behind it for a page the hostname does not name.
+ */
+const resourceName = (): string =>
+  window.location.hostname || (window as any).GetParentResourceName?.() || 'nui-frame-app';
 
 /**
  * POST to a `RegisterNUICallback` endpoint and return its `cb(...)` value.

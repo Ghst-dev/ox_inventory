@@ -18,7 +18,7 @@
  * usually what you want, but is worth knowing before nudging them.
  */
 
-import { settings } from './settings.svelte';
+import { prefs } from './prefs.svelte';
 
 export type SoundName = 'open' | 'close' | 'pickup' | 'drop' | 'deny';
 
@@ -170,7 +170,7 @@ const SOUNDS: Record<SoundName, (context: AudioContext, out: AudioNode) => void>
  * has an AudioContext created on their behalf.
  */
 export function play(name: SoundName): void {
-  const volume = settings.volume;
+  const volume = prefs.uiVolume;
 
   if (!volume) return;
 

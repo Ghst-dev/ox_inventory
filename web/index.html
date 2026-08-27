@@ -3,6 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      The page cannot talk to anything but itself.
+
+      `lib/nui.ts` replaces window.fetch with a same-origin filter and deletes XMLHttpRequest,
+      and describes that as stopping a compromised page phoning home. It does not: a stub the
+      page installs is a rule the page can also remove, and it never covered `<img>`, `<a>`,
+      CSS `url()` or `navigator.sendBeacon` at all. Item descriptions are rendered as markdown
+      HTML into the tooltip (lib/markdown.ts) and can carry player-written text, so an image
+      pointed at somebody's server was one description away. This is the layer underneath that
+      the browser enforces rather than asks for.
+
+      connect-src 'self' is only correct because `fetchNui` posts to the page's own hostname --
+      `cfx-nui-ox_inventory`, not the bare resource name. Both route here; only one is
+      same-origin. If NUI callbacks ever stop answering, that pairing is the first thing to
+      check.
+
+      img-src names the `nui:` scheme because item art is served from the `inventory:imagepath`
+      convar, which is `nui://ox_inventory/web/images`. Pointing that convar at an http host
+      would need this line widened -- deliberately, and with the beacon question answered.
+
+      'unsafe-inline' for styles is not optional: Svelte's transitions build keyframes into an
+      injected <style>, and the panes use inline style attributes for their measured sizes.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        script-src 'self';
+        connect-src 'self';
+        img-src 'self' nui: data: blob:;
+        style-src 'self' 'unsafe-inline';
+        font-src 'self' data:;
+        object-src 'none';
+        base-uri 'none';
+        form-action 'none';
+        frame-src 'none';
+      "
+    />
+
     <title>Ox Inventory</title>
   </head>
   <body>

@@ -22,8 +22,10 @@ to the original work*, and *preserve all copyright, license, and attribution not
 
 | | |
 |---|---|
-| **99 files** under `web/src` | The NUI, rebuilt |
-| **10 files** outside it | Seams the UI needed, plus the framework-strip patches |
+| **52 files** under `web/src` | The NUI, rebuilt |
+| **9 files** outside it | Seams the UI needed, plus the framework-strip patches |
+
+Against `main` that is 126 paths changed, because 55 of them are the React tree being deleted.
 
 ## The UI is Svelte, not React
 
@@ -53,14 +55,77 @@ inventory looks unfamiliar.
 | **Tidy** | Merge what stacks, then order it — with pinned slots left alone |
 | **Give, in place** | Pick who gets the item inside the inventory |
 | **A ped preview** | A copy of the player beside the inventory. Off by default |
-| **Bags open under your own pane** | On a button in its header, rather than replacing whatever you were looking at |
+| **Bags open under your own pane** | On a button in its header, rather than replacing whatever you were looking at — [see below](#a-bag-opens-beside-the-inventory-not-instead-of-it) |
 | **A voice** | Sound, without shipping a single audio file — see below |
 
 ## Sound without audio files
 
-The inventory has audio and the repository has no `.ogg` in it. Sounds are the game's own
-frontend sound sets, triggered from Lua, so nothing is streamed and nothing is added to the
-resource's size.
+The inventory has audio and the repository has no `.ogg` in it. The five sounds are built in the
+browser out of oscillators and filtered noise -- `web/src/lib/audio.ts`, a few numbers each -- so
+nothing is streamed, nothing is decoded, and the only thing added to the bundle is that file.
+
+The reason is `fxmanifest.lua`. Its `files` block globs exactly two things out of the built
+bundle, `web/build/assets/*.js` and `*.css`; a loose `.ogg` beside them is not published by the
+resource and 404s in game. Shipping a recorded clip would mean base64ing it into the JS chunk --
+tens of kilobytes of string constant nobody can adjust without an audio editor. Changing one of
+these is editing a frequency.
+
+Volume is the shared `uiVolume` preference, so the inventory is as loud as everything else on the
+server. See [ghst_prefs](#shared-preferences) below.
+
+## A bag opens beside the inventory, not instead of it
+
+The largest behaviour change here, and the one with the most rules behind it.
+
+Upstream shows a container the same way it shows a stash: as the right-hand pane, replacing
+whatever was there. Walking up to a stash wearing a backpack therefore meant choosing which of
+the two you could see. Using a bag with the window already open now adds a **third pane**, under
+your own inventory, on your side of the control column.
+
+**How the security survives it.** All of ox_inventory's transfer security rests on
+`playerInventory.open` being a single id the *server* chose — `swapItems` resolves the non-player
+side from it, which is why a client can never name an inventory. Widening `open` into a set would
+hand that decision to the client for every inventory type at once. A container is the one
+exception that costs nothing, because it is addressed by a **slot in the player's own inventory**
+rather than by an id: the worst a forged `fromType = 'container'` can reach is a bag the player is
+already carrying. So `open` is left alone and the bag is recorded in `containerSlot`, which the
+server already maintained.
+
+**One bag at a time.** `container` is a *type* on the wire, and the page resolves a type to a
+pane — so two panes wearing it are two panes it cannot tell apart. A bag opened with the window
+shut is still the right-hand pane, so using a second bag while that one is up replaces it rather
+than adding a third (`client.openContainer`). The server is single-minded for its own reason:
+`containerSlot` is one field.
+
+**The open bag does not move.** Every `container` move resolves through `containerSlot`, so a
+move that empties or overwrites that slot leaves the field naming something else. The drag is
+refused in the UI (`onDrop`) and again on the server (`swapItems`), rather than the field being
+repointed — repointing means guessing where the bag landed, and closing the bag first is one
+click.
+
+**What stays impossible.** A bag cannot trade directly with a stash: the exploit guard at the top
+of `swapItems` requires one side of any move to be the player, and that guard is worth more than
+the convenience. The UI refuses that drag visibly rather than letting the server reject it. A
+container cannot go inside a container either, which would nest weight calculations indefinitely.
+
+## Shared preferences
+
+Reduce motion, interface size and interface volume are not this inventory's settings. They belong
+to the player, and `ghst_prefs` owns them for every interface on the server — so the switch here
+and the one on the character screen are the same switch.
+
+`modules/prefs/client.lua` is six lines carrying that transport the last step into the page, and
+`web/src/lib/prefs.svelte.ts` is the copy of the shared client file every ghst UI has. A **soft
+dependency**, deliberately: `ghst_prefs` is not in `fxmanifest`'s `dependencies{}`, because a
+missing preferences resource should cost a player their preferences and not their inventory.
+
+Nothing is applied optimistically. A control writes to Lua, Lua writes the KVP and broadcasts,
+and the value arrives back through the listener — which is what stops two interfaces disagreeing
+about the answer.
+
+What stayed local is in `web/src/lib/settings.svelte.ts` and lives in `localStorage`: accent, slot
+size, tooltip delay, hotbar mode and the pinned slots. Those describe this inventory and nothing
+else.
 
 ## Icons: Lucide, not FontAwesome
 
@@ -98,16 +163,25 @@ One condition in `Inventory.CanAccessTrunk` (`modules/inventory/client.lua`), an
 behaviour change outside the interface.
 
 Upstream checks the vehicle class, the storage data, that a boot door exists and that you are
-within a metre and a half of it — and never asks whether the vehicle is **locked**. On a server
-running `ghst_vehiclekeys` that made the whole keys mechanic optional: a car nobody could open
-or start was still a car anybody could empty, and cargo is what most vehicle theft is actually
-for.
+within a metre and a half of it — and never asks whether the vehicle is **locked**, so the boot
+prompt appeared on every car within reach.
 
-It reads `Entity(entity).state.doorslockstate` rather than calling
-`exports.ghst_vehiclekeys:IsAccessible`. The lock state is already replicated to every client,
-so there is no round trip, no export call per frame, and no dependency on that resource being
-started: a vehicle with no lock state — every world car nobody has tried a door on — reads as
-unlocked and behaves exactly as upstream does.
+**This is the prompt, not the gate.** `openInventory`'s trunk branch on the server has always
+tested `GetVehicleDoorLockStatus` and answered `vehicle_locked`, so a locked boot was never
+actually lootable. What this line decides is whether the player is offered something that will
+work — which is why it has to reach the *same* answer the server will.
+
+It reads `Entity(entity).state.doorslockstate` and falls back to the native, rather than calling
+`exports.ghst_vehiclekeys:IsAccessible`. The lock state is already replicated to every client, so
+there is no round trip, no export call per frame, and no dependency on that resource being
+started. The fallback is the part that matters: a world vehicle has no lock state until somebody
+tries a door, and testing the statebag alone read every untouched car as unlocked — a prompt that
+lies. `ghst_vehiclekeys` documents the same trap in `GhstKeys.lockState`, where reading "not 2"
+as unlocked made a lockpick report a car it had never rolled for.
+
+The values are the server's, verbatim: 0 no lock, 1 unlocked, 8 boot unlocked, everything else
+locked. Testing `== 2` alone was safe only because `ghst_vehiclekeys` writes nothing but 1 and 2,
+which stops being true the moment the native answers instead.
 
 Keys are deliberately *not* consulted. Locked means locked, including for the owner, who
 unlocks the car and then opens the boot. That is one extra press, and it is the same press a

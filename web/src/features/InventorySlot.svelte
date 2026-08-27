@@ -304,6 +304,7 @@
    * composited rather than assigned.
    */
   .equipped .label {
+    background: rgba(16, 63, 70, 0.76);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(
       in srgb,
       var(--color-primary) 20%,
@@ -360,6 +361,7 @@
     /* Composited over the slot's own surface. --primary-glow is an 8%-alpha tint, so
        assigning it here would drop the sunken surface and let the game show through the
        one slot you are about to drop onto — see tokens.css. */
+    background-color: rgba(15, 48, 53, 0.742);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background-color: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
   }
 
@@ -370,6 +372,7 @@
   .slot:global([data-dnd-deny]) {
     border-color: var(--color-danger);
     border-style: dashed;
+    background-color: rgba(50, 21, 21, 0.736);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background-color: color-mix(in srgb, var(--color-danger) 12%, var(--surface-sunken));
     cursor: not-allowed;
   }
@@ -396,6 +399,7 @@
     padding: 3px 5px;
     font-size: var(--text-meta);
     line-height: 1.2;
+    background: rgba(10, 10, 10, 0.55);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 55%, transparent);
   }
 
@@ -423,6 +427,7 @@
 
   .label {
     padding: 3px 5px;
+    background: rgba(10, 10, 10, 0.7);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 70%, transparent);
     color: var(--color-gray);
     text-align: center;
@@ -436,6 +441,7 @@
      this size than a shadow does. */
   .price {
     padding: 2px 5px;
+    background: rgba(10, 10, 10, 0.62);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 62%, transparent);
     text-align: right;
     color: var(--color-danger-text);

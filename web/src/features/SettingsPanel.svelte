@@ -5,11 +5,11 @@
     ACCENTS,
     DELAY_RANGE,
     SCALE_RANGE,
-    VOLUME_RANGE,
     reset,
     settings,
     type HotbarMode,
   } from '../lib/settings.svelte';
+  import { prefs, setPref } from '../lib/prefs.svelte';
   import Icon from '../lib/Icon.svelte';
   import { X } from '../lib/icons';
 
@@ -33,15 +33,32 @@
     { id: 'always', key: 'ui_hotbar_always', fallback: 'Always' },
   ];
 
-  const volumeLabel = $derived(
-    settings.volume === 0 ? locale.ui_off || 'Off' : `${Math.round(settings.volume * 100)}%`,
-  );
-
   const delayLabel = $derived(
     settings.tooltipDelay === 0
       ? locale.ui_instant || 'Instant'
       : `${(settings.tooltipDelay / 1000).toFixed(1)}s`,
   );
+
+  /**
+   * The volume the thumb is at while it is being dragged, before anything is committed.
+   *
+   * The two sliders above this one write to local state and cost nothing. This one writes to
+   * `ghst_prefs`, and it used to do that from `oninput` — so a single drag from silent to full
+   * was up to twenty NUI round trips, twenty KVP writes, and twenty broadcasts fanned out to
+   * every interface on the server, for one decision.
+   *
+   * It commits on `change` instead, which fires once, on release. The readout still has to
+   * follow the thumb during the drag, and it cannot read `prefs.uiVolume` to do it — that value
+   * belongs to `ghst_prefs` and only moves when the broadcast comes back, which is the whole
+   * point of the transport. So the drag has a value of its own, and it is display only.
+   */
+  let dragging = $state<number | null>(null);
+  const shownVolume = $derived(dragging ?? prefs.uiVolume);
+
+  function commitVolume(value: number) {
+    dragging = null;
+    setPref('uiVolume', value);
+  }
 </script>
 
 <svelte:window {onkeydown} />
@@ -102,21 +119,6 @@
         </div>
 
         <div class="row">
-          <span class="label">{locale.ui_volume || 'Volume'}</span>
-          <div class="control">
-            <input
-              type="range"
-              min={VOLUME_RANGE.min}
-              max={VOLUME_RANGE.max}
-              step={VOLUME_RANGE.step}
-              bind:value={settings.volume}
-              aria-label={locale.ui_volume || 'Volume'}
-            />
-            <span class="value">{volumeLabel}</span>
-          </div>
-        </div>
-
-        <div class="row">
           <span class="label">{locale.ui_slot_size || 'Slot size'}</span>
           <div class="control">
             <input
@@ -146,23 +148,47 @@
           </div>
         </div>
 
+        <!--
+          The two shared rows. These write to `ghst_prefs`, which owns them for every interface on
+          the server, so the switch here and the one on the character screen are now the same
+          switch. Neither applies its own change: the value comes back on the broadcast.
+        -->
         <div class="row">
           <span class="label">{locale.ui_reduce_motion || 'Reduce motion'}</span>
           <button
             class="toggle"
-            class:on={settings.reduceMotion}
+            class:on={prefs.reduceMotion}
             role="switch"
-            aria-checked={settings.reduceMotion}
+            aria-checked={prefs.reduceMotion}
             aria-label={locale.ui_reduce_motion || 'Reduce motion'}
-            onclick={() => (settings.reduceMotion = !settings.reduceMotion)}
+            onclick={() => setPref('reduceMotion', !prefs.reduceMotion)}
           >
             <span class="knob"></span>
           </button>
         </div>
+
+        <div class="row">
+          <span class="label">{locale.ui_volume || 'Interface volume'}</span>
+          <div class="control">
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={shownVolume}
+              oninput={(event) => (dragging = Number((event.currentTarget as HTMLInputElement).value))}
+              onchange={(event) => commitVolume(Number((event.currentTarget as HTMLInputElement).value))}
+              aria-label={locale.ui_volume || 'Interface volume'}
+            />
+            <span class="value">
+              {shownVolume === 0 ? locale.ui_off || 'Off' : `${Math.round(shownVolume * 100)}%`}
+            </span>
+          </div>
+        </div>
       </div>
 
       <footer>
-        <span class="note">{locale.ui_settings_local || 'Saved on this computer only'}</span>
+        <span class="note">{locale.ui_settings_shared || 'The last two apply to every interface'}</span>
         <button class="reset" onclick={reset}>{locale.ui_reset || 'Reset'}</button>
       </footer>
     </div>
@@ -295,6 +321,7 @@
 
   .option.on {
     /* Tinted over the sunken surface rather than painted onto it, per tokens.css. */
+    background: rgba(15, 48, 53, 0.742);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
     color: var(--color-primary);
   }

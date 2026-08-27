@@ -62,24 +62,30 @@ export interface Settings {
   scale: number;
   /** Milliseconds of hover before a tooltip opens. 0 means immediately. */
   tooltipDelay: number;
-  /** Player override for the OS reduced-motion preference. */
-  reduceMotion: boolean;
-  /** 0 to 1. 0 is off, and off means no AudioContext is ever created. */
-  volume: number;
 }
+
+/*
+ * `reduceMotion` and `volume` used to live here, and they moved to `lib/prefs.svelte.ts`.
+ *
+ * They were never inventory settings. Reduce motion is a statement about the player, and this
+ * page's switch reached this page while the character screen's identical switch reached that one
+ * -- two owners, neither aware of the other, and a player who set it in one place watching the
+ * other ignore them. Volume is the same shape of problem one step earlier: two UIs made noise,
+ * each with its own idea of how loud.
+ *
+ * What is left here is genuinely local: an accent, a slot size, a hover delay. Those describe this
+ * inventory and nothing else, and they stay in localStorage where they were.
+ */
 
 const DEFAULTS: Settings = {
   accent: 'ghst',
   hotbar: 'flash',
   scale: 1,
   tooltipDelay: 500,
-  reduceMotion: false,
-  volume: 0.5,
 };
 
 export const SCALE_RANGE = { min: 0.8, max: 1.3, step: 0.05 };
 export const DELAY_RANGE = { min: 0, max: 1200, step: 100 };
-export const VOLUME_RANGE = { min: 0, max: 1, step: 0.05 };
 
 /**
  * Read what is stored, keeping only keys that still exist and values of the right shape.
@@ -101,8 +107,6 @@ function load(): Settings {
       hotbar: HOTBAR_MODES.includes(stored.hotbar!) ? stored.hotbar! : DEFAULTS.hotbar,
       scale: clamp(stored.scale, SCALE_RANGE.min, SCALE_RANGE.max, DEFAULTS.scale),
       tooltipDelay: clamp(stored.tooltipDelay, DELAY_RANGE.min, DELAY_RANGE.max, DEFAULTS.tooltipDelay),
-      reduceMotion: typeof stored.reduceMotion === 'boolean' ? stored.reduceMotion : DEFAULTS.reduceMotion,
-      volume: clamp(stored.volume, VOLUME_RANGE.min, VOLUME_RANGE.max, DEFAULTS.volume),
     };
   } catch {
     // Private-mode storage, a quota error, or a half-written blob. None of them are worth
@@ -154,7 +158,8 @@ export function applySettings(): void {
     // is declared, not where it is read.
     style.setProperty('--slot-scale', String(settings.scale));
 
-    document.documentElement.toggleAttribute('data-reduce-motion', settings.reduceMotion);
+    /* No `data-reduce-motion` here any more. `lib/prefs.svelte.ts` owns that attribute for every
+       ghst UI, and two writers of one attribute is what the shared transport exists to end. */
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
