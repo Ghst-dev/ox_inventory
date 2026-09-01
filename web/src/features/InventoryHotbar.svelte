@@ -164,7 +164,7 @@
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 6px;
+    gap: var(--space-1-5);
   }
 
   .slot {
@@ -174,12 +174,13 @@
     justify-content: space-between;
     width: var(--slot-size);
     height: var(--slot-size);
-    background-color: var(--surface-panel);
+    background-color: var(--surface-ambient);
     background-size: 62%;
     background-position: center;
     background-repeat: no-repeat;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border-ambient);
     border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-ambient);
     overflow: hidden;
   }
 
@@ -189,7 +190,7 @@
    * whole job of a bar you glance at mid-fight.
    */
   .slot:not(.filled) {
-    background-color: var(--surface-sunken);
+    background-color: var(--tint-sunken);
     opacity: 0.45;
   }
 
@@ -231,7 +232,7 @@
   }
 
   .label {
-    padding: 3px 5px;
+    padding: var(--space-0-5) var(--space-1);
     background: rgba(10, 10, 10, 0.7);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 70%, transparent);
     color: var(--color-gray);

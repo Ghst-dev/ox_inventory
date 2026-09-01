@@ -64,8 +64,12 @@ return {
 		}
 	},
 
+	--- Weighted, like `money` below and for the same reason -- see that entry. Dirty money is
+	--- cash, so a wash that has to be carried to a machine is physically bulky, which is the
+	--- correct answer and not an accident of keeping the two in step.
 	['black_money'] = {
 		label = 'Dirty Money',
+		weight = 0.1,
 	},
 
 	['burger'] = {
@@ -158,8 +162,28 @@ return {
 		}
 	},
 
+	--- **Cash has weight, and this is a Ghst change.** Upstream ships it weightless.
+	---
+	--- A weightless note means a player can carry ten million dollars at no cost -- and every
+	--- decision this server has made about money was arguing with that one missing field: the
+	--- ATM withdrawal ceiling exists to cap what a robbery is worth, the Fleeca card exists to
+	--- gate a machine, `ghst_banking` exists to hold a balance, and none of them mattered while
+	--- the pocket was free. See `txData/ghst_sv/docs/economy.md` §3.1.
+	---
+	--- **0.1g per dollar is a friction number, not a realistic one.** A real $100 bill weighs
+	--- about a gram, which would be 0.01 -- and at this server's 85kg carry limit (`ox.cfg`,
+	--- `inventory:weight`) that is $8.5 million in a pocket, which is no limit at all. At 0.1:
+	---
+	---     $5,000     0.5kg    a day's spending, unnoticeable
+	---     $100,000    10kg    a car's worth of cash, an eighth of what you can carry
+	---     $500,000    50kg    most of your inventory is money
+	---     $850,000    85kg    you are carrying nothing else
+	---
+	--- Fractional weights are safe: `modules/items/shared.lua` only defaults a missing weight to
+	--- zero and never rounds, and the per-slot weight is `item.weight * count`.
 	['money'] = {
 		label = 'Money',
+		weight = 0.1,
 	},
 
 	['mustard'] = {

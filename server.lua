@@ -15,6 +15,10 @@ local Items = require 'modules.items.server'
 local Inventory = require 'modules.inventory.server'
 local Utils = require 'modules.utils.server'
 
+--- Carry capacity earned from a `ghst_skills` strength rank. Called from `setPlayerInventory`
+--- below; a fork addition, and the module explains why it lives on this side of the seam.
+local applySkillCapacity = require 'modules.skills.server'
+
 ---@param player table
 ---@param data table?
 --- player requires source, identifier, and name
@@ -75,6 +79,11 @@ function server.setPlayerInventory(player, data)
         if server.syncInventory then server.syncInventory(inv) end
         TriggerClientEvent('ox_inventory:setPlayerInventory', player.source, Inventory.Drops, inventory, totalWeight,
             inv.player)
+
+        --- After the client has been sent the inventory, not before: `SetMaxWeight` fires
+        --- `ox_inventory:refreshMaxWeight` at a page that has to already know which inventory
+        --- that is. See modules/skills/server.lua for what the number is.
+        applySkillCapacity(player.source)
     end
 end
 

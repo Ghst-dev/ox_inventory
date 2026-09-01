@@ -78,18 +78,6 @@
 
   const bagOpen = $derived(!!inv.containerInventory);
 
-  /**
-   * The bag is already the right-hand pane, which is what using one from the hotbar does:
-   * client.lua opens the inventory *with* the bag rather than adding a pane to a window
-   * that is not up yet. The server refuses to show one inventory in two panes at once, so
-   * the button would be a no-op — it is not offered.
-   */
-  const bagOnRight = $derived(
-    !!bagSlot &&
-      inv.rightInventory.type === InventoryType.CONTAINER &&
-      inv.rightInventory.id === bagSlot.metadata?.container,
-  );
-
   const bagLabel = $derived(
     bagSlot ? (bagSlot.metadata?.label ?? itemDefs[bagSlot.name!]?.label ?? bagSlot.name) : '',
   );
@@ -296,7 +284,11 @@
          each pushing themselves right would split the free space between them instead of
          sitting together. -->
     <div class="tools">
-      {#if bagSlot && !bagOnRight}
+      <!-- Offered whenever the player is carrying a bag, with no second condition: a bag has
+           one place it can be now, so the button that puts it there can never be a no-op.
+           It used to be hidden while the bag was the right-hand pane — the one state where
+           the bag was in the wrong place and the button was the way out of it. -->
+      {#if bagSlot}
         <button
           class="tool"
           class:on={bagOpen}
@@ -414,7 +406,7 @@
   .pane {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
     /*
      * Everything the pane has to fit, spelled out. Preflight makes this border-box, so
      * the width covers the panel's own padding and its 1px border as well as the
@@ -437,7 +429,7 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .title {
@@ -455,14 +447,14 @@
     display: flex;
     align-self: center;
     align-items: center;
-    gap: 2px;
+    gap: var(--space-0-5);
     margin-left: auto;
   }
 
   .tool {
     flex: none;
     display: flex;
-    padding: 3px;
+    padding: var(--space-0-5);
     border-radius: var(--radius-sm);
     color: var(--color-dim);
     transition: color var(--dur-fast) var(--ease-out);
@@ -492,7 +484,7 @@
     flex: none;
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    gap: var(--space-1-5);
     font-size: var(--text-meta);
     color: var(--color-dim);
     transition: color var(--dur-base) var(--ease-out);
@@ -556,9 +548,9 @@
   .search {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 9px;
-    background: var(--surface-sunken);
+    gap: var(--space-2);
+    padding: var(--space-1-5) var(--space-2);
+    background: var(--tint-sunken);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     color: var(--color-dim);
@@ -587,7 +579,7 @@
   .search .clear {
     flex: none;
     display: flex;
-    padding: 2px;
+    padding: var(--space-0-5);
     border-radius: var(--radius-full);
     color: var(--color-dim);
   }
@@ -601,15 +593,15 @@
   .chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .chip {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 8px;
-    background: var(--surface-sunken);
+    gap: var(--space-1);
+    padding: var(--space-0-5) var(--space-2);
+    background: var(--tint-sunken);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-full);
     color: var(--color-dim);
@@ -629,8 +621,8 @@
 
   .chip.on {
     /* Tinted over the sunken surface rather than painted onto it, per tokens.css. */
-    background: rgba(15, 48, 53, 0.742);  /* CEF 103 has no color-mix() -- see theme/base.css */
-    background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
+    background-color: var(--tint-sunken);
+    background-image: var(--layer-selected);
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
@@ -651,7 +643,7 @@
     grid-column: 1 / -1;
     align-self: center;
     margin: 0;
-    padding: 24px 8px;
+    padding: var(--space-6) var(--space-2);
     text-align: center;
     font-size: var(--text-sm);
     color: var(--color-dim);

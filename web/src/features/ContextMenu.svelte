@@ -206,7 +206,7 @@
     display: flex;
     flex-direction: column;
     min-width: 160px;
-    padding: 4px;
+    padding: var(--space-1);
     background: var(--surface-raised);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -217,8 +217,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 6px 8px;
+    gap: var(--space-3);
+    padding: var(--space-1-5) var(--space-2);
     border-radius: var(--radius-sm);
     color: var(--color-gray);
     font-size: var(--text-sm);
@@ -229,7 +229,7 @@
   /* Neutral lift rather than a hue wash — the shared hover convention, see tokens.css. */
   .entry:hover,
   .entry.active {
-    background: var(--color-surface-2);
+    background-image: var(--layer-selected), var(--layer-hover);
     color: var(--color-white);
   }
 
@@ -241,7 +241,7 @@
      crosses it. Widening the submenu's hit area upward stops the menu closing when the
      cursor clips the corner — the cheap half of what floating-ui's safePolygon did. */
   .submenu {
-    padding-top: 6px;
+    padding-top: var(--space-1-5);
     margin-top: -4px;
   }
 </style>

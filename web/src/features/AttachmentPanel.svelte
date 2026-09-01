@@ -205,8 +205,8 @@
   header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-3);
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -214,7 +214,7 @@
     flex: none;
     width: 52px;
     height: 40px;
-    background-color: var(--surface-sunken);
+    background-color: var(--tint-sunken);
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
@@ -237,7 +237,7 @@
   }
 
   .serial {
-    margin: 2px 0 0;
+    margin: var(--space-0-5) 0 0;
     font-family: var(--font-mono);
     font-size: var(--text-meta);
     color: var(--color-dim);
@@ -246,7 +246,7 @@
   .close {
     flex: none;
     display: flex;
-    padding: 4px;
+    padding: var(--space-1);
     border-radius: var(--radius-full);
     color: var(--color-dim);
   }
@@ -258,8 +258,8 @@
   .condition {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -293,8 +293,8 @@
   .part {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 14px;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border-bottom: 1px solid var(--color-border);
     transition: opacity var(--dur-base) var(--ease-out);
   }
@@ -312,7 +312,7 @@
     flex: none;
     width: 34px;
     height: 26px;
-    background-color: var(--surface-sunken);
+    background-color: var(--tint-sunken);
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
@@ -344,7 +344,7 @@
   .detach {
     flex: none;
     display: flex;
-    padding: 5px;
+    padding: var(--space-1);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     color: var(--color-dim);
@@ -361,7 +361,7 @@
 
   .empty {
     margin: 0;
-    padding: 18px 14px;
+    padding: var(--space-4) var(--space-3);
     text-align: center;
     color: var(--color-dim);
     font-size: var(--text-sm);
@@ -369,7 +369,7 @@
 
   .note {
     margin: 0;
-    padding: 9px 14px;
+    padding: var(--space-2) var(--space-3);
     color: var(--color-dim);
     font-size: var(--text-meta);
   }

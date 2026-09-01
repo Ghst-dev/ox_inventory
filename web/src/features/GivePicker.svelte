@@ -112,8 +112,8 @@
   header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-3);
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -121,7 +121,7 @@
     flex: none;
     width: 38px;
     height: 32px;
-    background-color: var(--surface-sunken);
+    background-color: var(--tint-sunken);
     background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
@@ -143,7 +143,7 @@
   }
 
   .what {
-    margin: 2px 0 0;
+    margin: var(--space-0-5) 0 0;
     font-size: var(--text-sm);
     color: var(--color-white);
     overflow: hidden;
@@ -154,7 +154,7 @@
   .close {
     flex: none;
     display: flex;
-    padding: 4px;
+    padding: var(--space-1);
     border-radius: var(--radius-full);
     color: var(--color-dim);
   }
@@ -179,9 +179,9 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
+    gap: var(--space-2);
     width: 100%;
-    padding: 10px 14px;
+    padding: var(--space-2) var(--space-3);
     border-bottom: 1px solid var(--color-border);
     color: var(--color-gray);
     font-size: var(--text-sm);

@@ -67,20 +67,56 @@ export const findAvailableSlot = (item: Slot, data: ItemData, slots: Slot[]) => 
 };
 
 /**
- * Which pane is which for a given move. With no target type, the destination is
- * whichever pane the source is not — that is the ctrl+click quick-move.
- */
-/**
  * Which pane a wire type refers to.
  *
- * `container` is the only ambiguous one, and only in appearance: a bag opened while the
- * inventory was already up becomes the third pane, and a bag opened from a closed
- * inventory becomes the right-hand one. The client never creates both at once, so
- * preferring the third pane when it exists is exact rather than a guess.
+ * `container` used to be ambiguous: a bag opened while the inventory was up became the
+ * third pane, and a bag opened from a closed inventory became the right-hand one. It is
+ * not ambiguous any more — client.lua routes every way of opening a bag, the item, the
+ * header button and the `openInventory('container', slot)` export alike, through
+ * `client.openContainer`, so a bag is only ever the third pane. Preferring it is exact.
  */
 export const paneOf = (state: State, type: Inventory['type']): Inventory => {
   if (type === InventoryType.PLAYER) return state.leftInventory;
   if (type === InventoryType.CONTAINER && state.containerInventory) return state.containerInventory;
+
+  return state.rightInventory;
+};
+
+/**
+ * Is this pane an inventory the server actually opened?
+ *
+ * The id is the honest marker, and the only one. An empty pane reaches here in two shapes:
+ * the initial `emptyInventory()` before any window has opened, whose id is the empty
+ * string, and — far more often — client.lua's `defaultInventory`, the `newdrop` pane shown
+ * whenever there is nothing to your right, which carries no id at all. Everything the
+ * server opens answers with one.
+ *
+ * Not item count, and not slot count: an open stash may legitimately be empty, and the
+ * newdrop pane is sized like a real one.
+ */
+export const isOpenInventory = (inventory: Inventory): boolean => !!inventory.id;
+
+/**
+ * Which pane is which for a given move. With no target type, the destination is whichever
+ * pane the source is not — that is the ctrl+click quick-move, and the same resolution the
+ * shift-halving and Ctrl+Shift variants route through.
+ *
+ * THE PLAYER SIDE HAS TO LOOK TWICE. "The other pane" for an item in your pockets is the
+ * right-hand one, and that pane is empty whenever a bag is the only thing open — which,
+ * since a bag is always the third pane, is the common case. So when nothing foreign is
+ * open the bag takes the quick-move instead.
+ *
+ * Checked rather than hoped: this is identical to the old behaviour in both cases that
+ * actually occur. Bag only — the bag used to *be* the right-hand pane, and still receives
+ * the item. Stash open — the right-hand pane wins, exactly as before. What is left when
+ * neither holds is the newdrop pane, which is the old behaviour too: ctrl+click with
+ * nothing open drops the item on the ground. Only the never-rendered `emptyInventory()`
+ * has no slot to offer, and onDrop refuses that move rather than inventing one.
+ */
+const quickMoveTarget = (state: State, sourceType: Inventory['type']): Inventory => {
+  if (sourceType !== InventoryType.PLAYER) return state.leftInventory;
+  if (!isOpenInventory(state.rightInventory) && state.containerInventory)
+    return state.containerInventory;
 
   return state.rightInventory;
 };
@@ -91,11 +127,7 @@ export const getTargetInventory = (
   targetType?: Inventory['type'],
 ): { sourceInventory: Inventory; targetInventory: Inventory } => ({
   sourceInventory: paneOf(state, sourceType),
-  targetInventory: targetType
-    ? paneOf(state, targetType)
-    : sourceType === InventoryType.PLAYER
-      ? state.rightInventory
-      : state.leftInventory,
+  targetInventory: targetType ? paneOf(state, targetType) : quickMoveTarget(state, sourceType),
 });
 
 /**

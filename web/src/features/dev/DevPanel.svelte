@@ -2,6 +2,7 @@
   import { debugData } from '../../lib/nui';
   import { nuiMocks } from '../../lib/mocks';
   import { inv } from '../../lib/inventory.svelte';
+  import { ui } from '../../lib/ui.svelte';
   import * as fixtures from './fixtures';
 
   /**
@@ -48,6 +49,11 @@
   const openWith = (right: unknown) =>
     send('setupInventory', { leftInventory: fixtures.player, rightInventory: right });
 
+  // Opening onto nothing still names a right pane, because client.lua always sends one: the
+  // newdrop pane. Naming it matters here — leaving it out would keep whatever stash was open
+  // last in the store, and the state this is meant to show is precisely its absence.
+  const playerOnly = { leftInventory: fixtures.player, rightInventory: fixtures.newdrop };
+
   /**
    * The bag pane, and the two callbacks that drive it.
    *
@@ -55,6 +61,10 @@
    * asks the server for the bag and pushes `setupContainer` back. Mocking both halves is
    * what makes the button testable here — without them it posts into the void and the
    * pane never appears, which reads as a broken button rather than a missing harness.
+   *
+   * Opening the window first when it is shut is the other half of the same fidelity:
+   * client.openContainer does exactly that, in that order, because setupInventory clears
+   * the bag pane. Sending only the container here would set state nothing renders.
    */
   const backpack = {
     id: 'container-bag1',
@@ -65,7 +75,11 @@
     items: fixtures.backpack,
   };
 
-  const openBackpack = () => send('setupContainer', backpack);
+  const openBackpack = () => {
+    if (!ui.inventoryOpen) send('setupInventory', playerOnly);
+
+    send('setupContainer', backpack);
+  };
   const closeBackpack = () => send('setupContainer', false);
 
   nuiMocks.openContainer = () => {
@@ -140,8 +154,12 @@
         ['Stash', () => openWith(fixtures.stash)],
         ['Shop', () => openWith(fixtures.shop)],
         ['Crafting bench', () => openWith(fixtures.crafting)],
-        ['Container', () => openWith(fixtures.container)],
-        ['Player only', () => send('setupInventory', { leftInventory: fixtures.player })],
+        // A container as the *right* pane. client.lua no longer produces this — bags open
+        // into the player's own column — but the server's forceOpenInventory export can
+        // still push one, so the layout stays reachable here. The refusal that goes with it
+        // is client-side and has no counterpart in the mocks.
+        ['Container (forced)', () => openWith(fixtures.container)],
+        ['Player only', () => send('setupInventory', playerOnly)],
         ['Close', () => send('closeInventory')],
       ],
     ],

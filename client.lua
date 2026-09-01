@@ -113,36 +113,60 @@ local currentInventory = defaultInventory
 ]]
 local currentContainer
 
+--[[
+    ONE PLACE A BAG CAN BE, AND IT IS YOUR OWN COLUMN.
+
+    A bag used to have two presentations depending on how it was opened: with the window up
+    it became this pane, and with the window shut it was handed to `openInventory` and became
+    the right-hand one. That side belongs to the single foreign inventory the server chose to
+    show you, so a bag sitting in it meant no stash could be seen beside it -- and the page
+    hid the header's bag button in exactly that state, so the one control that would have
+    moved it was gone until the whole window was closed and reopened.
+
+    Both are the same two steps now: get the window up, then add the pane. Which is also what
+    lets the page say plainly that a `container` on the wire is this pane and nothing else.
+]]
 ---@param slot number a slot in the player's own inventory holding a container item
+---@return boolean? # true only when the pane is up, so openInventory can pass the answer on
 function client.openContainer(slot)
-    -- Only as a second pane on an open window. With the inventory shut, using a bag still
-    -- opens it the old way, as the right-hand pane of a freshly opened inventory.
-    if not invOpen then return end
+    if not invOpen then
+        --[[
+            Sequenced rather than raced. `openInventory` returns only once its own callback
+            has answered and `setupInventory` has gone out, so the `setupContainer` below
+            cannot reach the page ahead of the window it belongs to -- which matters because
+            setupInventory *clears* the bag pane, so the other order would open a bag and
+            immediately forget it.
 
-    -- Using the bag that is already open closes it, the same way re-opening a stash does.
-    if currentContainer and currentContainer.slot == slot then
-        return client.closeContainer()
-    end
+            Note what is deliberately not checked afterwards: `invOpen` is written through a
+            statebag, so the local copy is still false for a frame or two after this returns.
+            Nothing below reads it.
+        ]]
+        if not client.openInventory() then return end
+    else
+        -- Using the bag that is already open closes it, the same way re-opening a stash does.
+        if currentContainer and currentContainer.slot == slot then
+            return client.closeContainer()
+        end
 
-    --[[
-        NEVER TWO CONTAINER PANES.
+        --[[
+            NEVER TWO CONTAINER PANES.
 
-        A bag opened with the inventory shut becomes the right-hand pane; a bag opened with it
-        up becomes this third one. Both report `type = 'container'` to the page, and the page
-        resolves a wire type to a pane -- so with one of each, a drag out of the right-hand bag
-        was resolved against the third one and the wrong bag lost the item. Client and server
-        agreed on the wrong answer, so nothing snapped back and nothing errored.
+            Both would report `type = 'container'` to the page, and the page resolves a wire
+            type to a pane -- so with one of each, a drag out of one was resolved against the
+            other and the wrong bag lost the item, with client and server agreeing on the
+            wrong answer so that nothing snapped back and nothing errored. The server is
+            single-minded for its own reasons: `containerSlot` is one field, so it can only
+            ever address the bag opened last.
 
-        The server has the same single-mindedness for its own reasons: `containerSlot` is one
-        field, so it can only ever address the bag opened last.
-
-        Handing this case to `openInventory` keeps one bag on screen and keeps it the one the
-        player just asked for -- the new bag replaces the right-hand pane, which is exactly
-        what using a bag does when the window is shut. Refusing instead would be a keypress
-        that silently does nothing.
-    ]]
-    if currentInventory.type == 'container' then
-        return client.openInventory('container', slot)
+            Nothing in this resource can produce the collision any more -- a bag never becomes
+            the right-hand pane. What is left is another resource calling the *server's*
+            `forceOpenInventory` export with a container, which bypasses this file entirely;
+            hence a warning rather than a notify, because the player is not the one who can
+            do anything about it.
+        ]]
+        if currentInventory.type == 'container' then
+            return warn('cannot open a bag beside a forced container inventory')
+        end
     end
 
     local container = lib.callback.await('ox_inventory:openContainer', false, slot)
@@ -152,6 +176,8 @@ function client.openContainer(slot)
     currentContainer = { slot = slot, id = container.id }
 
     SendNUIMessage({ action = 'setupContainer', data = container })
+
+    return true
 end
 
 function client.closeContainer()
@@ -195,21 +221,26 @@ local Inventory = require 'modules.inventory.client'
 function client.openInventory(inv, data)
 	if invOpen == nil then return end
 
+	--[[
+		A bag is not a foreign inventory and never takes the right-hand pane, so the one thing
+		a `container` request can mean is the pane that does own it. Routed here rather than at
+		the call sites, so an external `exports.ox_inventory:openInventory('container', slot)`
+		lands in the same place the item and the header button do -- which is what lets the
+		page resolve a `container` on the wire to exactly one pane.
+	]]
+	if inv == 'container' then return client.openContainer(data) end
+
 	if invOpen then
 		if not inv and currentInventory.type == 'newdrop' then
 			return client.closeInventory()
 		end
 
 		if IsNuiFocused() then
-			if inv == 'container' and currentInventory.id == PlayerData.inventory[data].metadata.container then
-				return client.closeInventory()
-			end
-
 			if currentInventory.type == 'drop' and (not data or currentInventory.id == (type(data) == 'table' and data.id or data)) then
 				return client.closeInventory()
 			end
 
-			if inv ~= 'drop' and inv ~= 'container' then
+			if inv ~= 'drop' then
 				if (data?.id or data) == currentInventory.id then
 					-- Triggering exports.ox_inventory:openInventory('stash', 'mystash') twice in rapid succession is weird behaviour
 					return warn(("script tried to open inventory, but it is already open\n%s"):format(Citizen.InvokeNative(`FORMAT_STACK_TRACE` & 0xFFFFFFFF, nil, 0, Citizen.ResultAsString())))
@@ -368,7 +399,7 @@ function client.openInventory(inv, data)
         }
     })
 
-    if inv and not currentInventory.coords and inv ~= 'container' and inv ~= 'glovebox' then
+    if inv and not currentInventory.coords and inv ~= 'glovebox' then
         currentInventory.coords = GetEntityCoords(playerPed)
     end
 
@@ -591,11 +622,9 @@ local function useSlot(slot, noAnim)
 		data.slot = slot
 
 		if item.metadata.container then
-			-- Open, and it becomes a third panel; closed, it opens the inventory with the
-			-- bag on the right exactly as before.
-			if invOpen then return client.openContainer(item.slot) end
-
-			return client.openInventory('container', item.slot)
+			-- One path whether the window is up or not: openContainer opens it first if it
+			-- has to, and the bag is a pane in the player's own column either way.
+			return client.openContainer(item.slot)
 		elseif data.client then
 			if invOpen and data.close then client.closeInventory() end
 

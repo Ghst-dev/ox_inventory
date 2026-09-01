@@ -268,7 +268,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: var(--space-5);
 
     /* Centres within the space beside the dev drawer. 0 everywhere else — see app.css. */
     padding-left: var(--dev-shift);
@@ -276,7 +276,7 @@
     /* A stacked column is sized to fit whatever is left of the viewport, and without this
        "whatever is left" is the whole of it — panes flush against the top and bottom
        edges of the screen. This is the margin they keep. */
-    padding-block: 16px;
+    padding-block: var(--space-4);
   }
 
   /*
@@ -290,7 +290,7 @@
   .column {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--space-2);
 
     /*
      * THE COLUMN NEVER OUTGROWS THE SCREEN. Its two panes are otherwise both fixed

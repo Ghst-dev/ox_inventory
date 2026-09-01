@@ -123,9 +123,9 @@
     z-index: 80;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
     width: 180px;
-    padding: 10px;
+    padding: var(--space-2);
     background: var(--surface-raised);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -146,13 +146,13 @@
   .entry {
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    gap: var(--space-1-5);
   }
 
   .field {
     width: 100%;
-    padding: 5px 8px;
-    background: var(--surface-sunken);
+    padding: var(--space-1) var(--space-2);
+    background: var(--tint-sunken);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     color: var(--color-white);
@@ -193,13 +193,13 @@
 
   .quick {
     display: flex;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .quick button {
     flex: 1;
-    padding: 4px 0;
-    background: var(--surface-sunken);
+    padding: var(--space-1) 0;
+    background: var(--tint-sunken);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     color: var(--color-gray);
@@ -215,7 +215,7 @@
   }
 
   .confirm {
-    padding: 6px 0;
+    padding: var(--space-1-5) 0;
     background: var(--surface-panel);
     border: 1px solid var(--primary-glow-border);
     border-radius: var(--radius-sm);

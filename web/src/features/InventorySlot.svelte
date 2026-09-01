@@ -263,7 +263,7 @@
     flex-direction: column;
     justify-content: space-between;
     height: var(--slot-size);
-    background-color: var(--surface-sunken);
+    background-color: var(--tint-sunken);
     background-size: 62%;
     background-position: center;
     background-repeat: no-repeat;
@@ -361,8 +361,11 @@
     /* Composited over the slot's own surface. --primary-glow is an 8%-alpha tint, so
        assigning it here would drop the sunken surface and let the game show through the
        one slot you are about to drop onto — see tokens.css. */
-    background-color: rgba(15, 48, 53, 0.742);  /* CEF 103 has no color-mix() -- see theme/base.css */
-    background-color: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
+    /* The accent state layer over the well's tint. This was a `color-mix()` with a hand-computed
+       rgba fallback above it; the layer form needs neither, because a gradient of one colour is
+       an ordinary background-image and CEF 103 has had those forever. */
+    background-color: var(--tint-sunken);
+    background-image: var(--layer-selected);
   }
 
   /* Hovered and refused. Before this the attribute was never set — a target that said no
@@ -372,8 +375,8 @@
   .slot:global([data-dnd-deny]) {
     border-color: var(--color-danger);
     border-style: dashed;
-    background-color: rgba(50, 21, 21, 0.736);  /* CEF 103 has no color-mix() -- see theme/base.css */
-    background-color: color-mix(in srgb, var(--color-danger) 12%, var(--surface-sunken));
+    background-color: var(--tint-sunken);
+    background-image: var(--layer-danger);
     cursor: not-allowed;
   }
 
@@ -395,8 +398,8 @@
   .foot {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 5px;
+    gap: var(--space-1);
+    padding: var(--space-0-5) var(--space-1);
     font-size: var(--text-meta);
     line-height: 1.2;
     background: rgba(10, 10, 10, 0.55);  /* CEF 103 has no color-mix() -- see theme/base.css */
@@ -406,7 +409,7 @@
   .foot {
     flex-direction: column;
     align-items: stretch;
-    gap: 2px;
+    gap: var(--space-0-5);
     padding: 0;
     background: none;
   }
@@ -426,7 +429,7 @@
   }
 
   .label {
-    padding: 3px 5px;
+    padding: var(--space-0-5) var(--space-1);
     background: rgba(10, 10, 10, 0.7);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 70%, transparent);
     color: var(--color-gray);
@@ -440,7 +443,7 @@
      used a hard text-shadow for the same reason. A tinted strip reads more cleanly at
      this size than a shadow does. */
   .price {
-    padding: 2px 5px;
+    padding: var(--space-0-5) var(--space-1);
     background: rgba(10, 10, 10, 0.62);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 62%, transparent);
     text-align: right;
@@ -456,7 +459,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 3px;
+    gap: var(--space-0-5);
   }
 
   .price.currency img {

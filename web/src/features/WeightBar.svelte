@@ -31,7 +31,7 @@
   .track {
     width: 100%;
     height: 6px;
-    background: var(--surface-sunken);
+    background: var(--tint-sunken);
     border-radius: var(--radius-full);
     overflow: hidden;
   }

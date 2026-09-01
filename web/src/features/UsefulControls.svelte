@@ -77,7 +77,7 @@
   .dialog {
     width: 420px;
     max-width: calc(100vw - 32px);
-    padding: 16px 18px;
+    padding: var(--space-4) var(--space-4);
     background: var(--surface-raised);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -88,15 +88,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 10px;
-    margin-bottom: 12px;
+    padding-bottom: var(--space-2);
+    margin-bottom: var(--space-3);
     border-bottom: 1px solid var(--color-border);
     font-size: var(--text-subheading);
     color: var(--color-white);
   }
 
   .close {
-    padding: 6px;
+    padding: var(--space-1-5);
     color: var(--color-dim);
     border-radius: var(--radius-sm);
   }
@@ -108,20 +108,20 @@
   dl {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .row {
     display: grid;
     grid-template-columns: 150px 1fr;
-    gap: 12px;
+    gap: var(--space-3);
     align-items: center;
   }
 
   kbd {
     display: inline-block;
-    padding: 3px 7px;
-    background: var(--surface-sunken);
+    padding: var(--space-0-5) var(--space-1-5);
+    background: var(--tint-sunken);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     color: var(--color-primary);

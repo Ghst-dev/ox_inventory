@@ -176,7 +176,7 @@
 <style>
   .tooltip {
     width: 260px;
-    padding: 10px 12px;
+    padding: var(--space-2) var(--space-3);
     background: var(--surface-raised);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -189,9 +189,9 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
-    padding-bottom: 6px;
-    margin-bottom: 6px;
+    gap: var(--space-2);
+    padding-bottom: var(--space-1-5);
+    margin-bottom: var(--space-1-5);
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -205,13 +205,13 @@
   /* Set apart from the item's own figures above it: these are differences, and reading a
      delta as an absolute is the one mistake this block can cause. */
   .versus {
-    margin-top: 8px;
-    padding-top: 6px;
+    margin-top: var(--space-2);
+    padding-top: var(--space-1-5);
     border-top: 1px solid var(--color-border);
   }
 
   .against {
-    margin: 0 0 4px;
+    margin: 0 0 var(--space-1);
     font-size: var(--text-meta);
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
@@ -243,28 +243,28 @@
   }
 
   .description {
-    margin-bottom: 6px;
+    margin-bottom: var(--space-1-5);
     color: var(--color-gray);
     font-size: var(--text-sm);
   }
 
   /* Markdown output is generated, so its elements cannot be reached by scoped styles. */
   .description :global(p + p) {
-    margin-top: 4px;
+    margin-top: var(--space-1);
   }
   .description :global(strong) {
     color: var(--color-white);
     font-weight: var(--font-weight-medium);
   }
   .description :global(ul) {
-    padding-left: 16px;
+    padding-left: var(--space-4);
     list-style: disc;
   }
 
   dl {
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 2px 12px;
+    gap: var(--space-0-5) var(--space-3);
     font-size: var(--text-meta);
   }
 
@@ -284,13 +284,13 @@
   .ingredients {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-1);
   }
 
   .ingredients li {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-1-5);
     font-size: var(--text-meta);
     color: var(--color-gray);
   }

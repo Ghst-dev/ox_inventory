@@ -79,8 +79,16 @@ The largest behaviour change here, and the one with the most rules behind it.
 
 Upstream shows a container the same way it shows a stash: as the right-hand pane, replacing
 whatever was there. Walking up to a stash wearing a backpack therefore meant choosing which of
-the two you could see. Using a bag with the window already open now adds a **third pane**, under
-your own inventory, on your side of the control column.
+the two you could see. A bag is now always a **third pane**, under your own inventory, on your
+side of the control column — it is part of you, so it stays on your side.
+
+**However it was opened.** Using a bag with the window shut used to take the other path and land
+in the right-hand pane, so the same backpack had two presentations and one of them blocked the
+stash. Worse, the header's bag button was hidden in exactly that state, so the control that
+would have moved it was gone until the window was closed and reopened. `client.openContainer`
+opens the window first when it has to, and `openInventory('container', slot)` — the export, the
+only caller left — is routed to it, so the page can resolve a `container` on the wire to exactly
+one pane.
 
 **How the security survives it.** All of ox_inventory's transfer security rests on
 `playerInventory.open` being a single id the *server* chose — `swapItems` resolves the non-player
@@ -92,10 +100,15 @@ already carrying. So `open` is left alone and the bag is recorded in `containerS
 server already maintained.
 
 **One bag at a time.** `container` is a *type* on the wire, and the page resolves a type to a
-pane — so two panes wearing it are two panes it cannot tell apart. A bag opened with the window
-shut is still the right-hand pane, so using a second bag while that one is up replaces it rather
-than adding a third (`client.openContainer`). The server is single-minded for its own reason:
-`containerSlot` is one field.
+pane — so two panes wearing it are two panes it cannot tell apart. With one place a bag can be,
+using a second one replaces the first in that place. The server is single-minded for its own
+reason: `containerSlot` is one field.
+
+**Quick transfer follows the bag.** Ctrl+click moves an item to "the other pane", which for an
+item in your pockets is the right-hand one — and that is now empty whenever only a bag is open.
+So the player side falls back to the bag when no foreign inventory is open, which makes the
+gesture do what it did before in both real cases: bag only, it goes to the bag; stash open, it
+goes to the stash (`helpers.getTargetInventory`).
 
 **The open bag does not move.** Every `container` move resolves through `containerSlot`, so a
 move that empties or overwrites that slot leaves the field naming something else. The drag is
@@ -186,6 +199,68 @@ which stops being true the moment the native answers instead.
 Keys are deliberately *not* consulted. Locked means locked, including for the owner, who
 unlocks the car and then opens the boot. That is one extra press, and it is the same press a
 thief has to earn.
+
+## Cash has weight
+
+`data/items.lua`, one field on two items, 2026-08-31:
+
+```lua
+['money']       = { label = 'Money',       weight = 0.1 },
+['black_money'] = { label = 'Dirty Money', weight = 0.1 },
+```
+
+Upstream ships both weightless, and the consequence is bigger than the diff. A weightless note
+means a player carries ten million dollars at no cost — and every decision this server had made
+about money was arguing with that one missing field. `ghst_banking`'s withdrawal ceiling exists to
+cap what a robbery is worth; its Fleeca card gates a machine; the bank account holds a balance. None
+of them meant anything while the pocket was free.
+
+**0.1g per dollar is friction, not realism.** A real $100 bill is about a gram, which would be 0.01
+— and against this server's 85kg limit (`ox.cfg`, `inventory:weight`) that is $8.5 million in a
+pocket. At 0.1, $5,000 is half a kilo and $500,000 is most of what a person can carry.
+
+Two things a reader should know before changing it:
+
+- **Fractional weights are safe.** `modules/items/shared.lua` defaults a missing weight to zero and
+  never rounds; a slot's weight is `item.weight * count`.
+- **It is retroactive and there is no migration.** A character already holding $2M is 200kg over
+  and cannot pick anything up until they bank some of it. That is the pressure working as intended
+  rather than a bug, but it happens the moment this deploys, to everyone at once.
+
+The reasoning lives in `txData/ghst_sv/docs/economy.md` §3.1.
+
+## Strength buys carry capacity
+
+`modules/skills/server.lua` (new) and one call in `server.lua`, 2026-08-31:
+
+```lua
+maxWeight = inventory:weight + inventory:strengthweight * (strength rank / max rank)
+```
+
+`ghst_skills` carries a `strength` rank per character. This turns it into grams: rank 0 is
+`inventory:weight` exactly — 85kg, what every character carries today and what the server did
+before this file — and rank 100 adds `inventory:strengthweight`, 25kg by default. Set that convar
+to `0` to switch the whole thing off without editing anything.
+
+Capacity is applied twice: once at the end of `setPlayerInventory`, after the client has been sent
+the inventory it is about to be told the new limit for, and again on `ghst_skills:rankChanged`
+whenever a strength rank moves under a player who is already connected.
+
+Three things worth knowing:
+
+- **The direction is deliberate.** `maxWeight` is this resource's value and `Inventory.SetMaxWeight`
+  is its only legitimate writer — it has a client event to fire afterwards. So the integration
+  lives here and `ghst_skills` only answers what the rank is. Licensing permits this direction and
+  not every direction: ox_inventory is GPL-3.0 like the `ghst_*` resources, where ox_lib (LGPL) and
+  ox_target (MIT) are not. See `Tools/README.md`.
+- **Start order does not matter.** `ghst_skills`' `GetRank` takes a source *or* a citizenid and
+  falls back to reading qbx_core player metadata, so it answers correctly even when asked before
+  that resource has loaded the character.
+- **It only ever adds.** Nothing here can leave a player over a limit that just shrank. That stops
+  being true if `inventory:strengthweight` is ever made negative — `SetMaxWeight` does not shed
+  items, it only refuses more.
+
+With `ghst_skills` stopped, `GetResourceState` sends every player back to the flat convar.
 
 ## Framework-strip patches
 

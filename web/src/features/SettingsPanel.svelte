@@ -222,8 +222,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 12px 14px;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-3);
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -237,7 +237,7 @@
 
   .close {
     display: flex;
-    padding: 4px;
+    padding: var(--space-1);
     border-radius: var(--radius-full);
     color: var(--color-dim);
   }
@@ -255,8 +255,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 11px 14px;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-3);
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -267,7 +267,7 @@
 
   .swatches {
     display: flex;
-    gap: 6px;
+    gap: var(--space-1-5);
   }
 
   .swatch {
@@ -293,19 +293,19 @@
   .control {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-2);
   }
 
   .segment {
     display: flex;
-    background: var(--surface-sunken);
+    background: var(--tint-sunken);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     overflow: hidden;
   }
 
   .option {
-    padding: 4px 10px;
+    padding: var(--space-1) var(--space-2);
     color: var(--color-dim);
     font-size: var(--text-meta);
     letter-spacing: var(--tracking-label);
@@ -320,9 +320,10 @@
   }
 
   .option.on {
-    /* Tinted over the sunken surface rather than painted onto it, per tokens.css. */
-    background: rgba(15, 48, 53, 0.742);  /* CEF 103 has no color-mix() -- see theme/base.css */
-    background: color-mix(in srgb, var(--color-primary) 14%, var(--surface-sunken));
+    /* The accent state layer over the well's tint, per tokens.css -- no `color-mix()` and so no
+       hand-computed fallback to keep in step with it. */
+    background-color: var(--tint-sunken);
+    background-image: var(--layer-selected);
     color: var(--color-primary);
   }
 
@@ -343,9 +344,9 @@
     position: relative;
     width: 38px;
     height: 20px;
-    padding: 2px;
+    padding: var(--space-0-5);
     border-radius: var(--radius-full);
-    background: var(--surface-sunken);
+    background: var(--tint-sunken);
     border: 1px solid var(--color-border);
     transition:
       background var(--dur-fast) var(--ease-out),
@@ -377,8 +378,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 10px 14px;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
   }
 
   .note {
@@ -387,7 +388,7 @@
   }
 
   .reset {
-    padding: 5px 12px;
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
     color: var(--color-gray);

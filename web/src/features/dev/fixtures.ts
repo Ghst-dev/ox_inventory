@@ -242,10 +242,27 @@ export const crafting: Inventory = {
 };
 
 /**
- * A bag opened from inside the player's inventory, as the *right* pane — what using one
- * from the hotbar does, with the inventory closed. Its id is the one the player fixture's
- * bag item carries, so the header button correctly recognises this as the same bag and
- * stands down rather than offering to open it twice.
+ * The right-hand pane when there is nothing to your right — client.lua's `defaultInventory`,
+ * which every window carries whether or not it opened onto anything.
+ *
+ * It is not inert. Its slots are real drop targets, and dropping into one is how an item
+ * reaches the ground; ctrl+click from the player's pane lands here too whenever no bag and
+ * no foreign inventory are open. The empty id is the point: Lua sends none at all, and
+ * `isOpenInventory` reads either as "nothing the server opened".
+ */
+export const newdrop: Inventory = {
+  id: '',
+  type: 'newdrop',
+  slots: 40,
+  maxWeight: 30000,
+  items: [],
+};
+
+/**
+ * A bag as the *right* pane. Nothing in client.lua produces this any more — a bag is always
+ * a pane in the player's own column — but the server's forceOpenInventory export can still
+ * push one, so the layout stays reachable from the drawer. Its id is the one the player
+ * fixture's bag item carries, so it is recognisably the same bag.
  */
 export const container: Inventory = {
   id: 'container-bag1',

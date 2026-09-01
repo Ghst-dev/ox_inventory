@@ -133,15 +133,15 @@
     /* Never the column that gives. With three panes flexbox would otherwise take this
        one down to half its width before touching anything else. */
     flex: none;
-    gap: 8px;
+    gap: var(--space-2);
     width: 150px;
-    padding-top: 34px;
+    padding-top: var(--space-8);
   }
 
   .amount {
     width: 100%;
-    padding: 8px 10px;
-    background: var(--surface-sunken);
+    padding: var(--space-2) var(--space-2);
+    background: var(--tint-sunken);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     color: var(--color-white);
@@ -157,7 +157,7 @@
   }
 
   .verb {
-    padding: 9px 12px;
+    padding: var(--space-2) var(--space-3);
     background: var(--surface-panel);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
@@ -200,12 +200,12 @@
   .tools {
     display: flex;
     align-self: center;
-    gap: 4px;
-    margin-top: 4px;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
   }
 
   .help {
-    padding: 6px;
+    padding: var(--space-1-5);
     color: var(--color-dim);
     border-radius: var(--radius-full);
   }

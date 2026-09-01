@@ -112,7 +112,7 @@
     bottom: 24px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-1-5);
     align-items: flex-end;
     pointer-events: none;
   }
@@ -123,18 +123,18 @@
     justify-content: space-between;
     width: var(--slot-size);
     height: var(--slot-size);
-    background-color: var(--surface-raised);
+    background-color: var(--surface-ambient);
     background-size: 62%;
     background-position: center;
     background-repeat: no-repeat;
     border: 1px solid var(--primary-glow-border);
     border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-raised);
+    box-shadow: var(--shadow-ambient);
     overflow: hidden;
   }
 
   .action {
-    padding: 3px 5px;
+    padding: var(--space-0-5) var(--space-1);
     background: rgb(15, 54, 60);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-primary) 22%, var(--color-bg));
     color: var(--color-white);
@@ -174,7 +174,7 @@
   }
 
   .name {
-    padding: 3px 5px;
+    padding: var(--space-0-5) var(--space-1);
     background: rgba(10, 10, 10, 0.7);  /* CEF 103 has no color-mix() -- see theme/base.css */
     background: color-mix(in srgb, var(--color-bg) 70%, transparent);
     color: var(--color-gray);
