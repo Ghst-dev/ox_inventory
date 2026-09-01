@@ -32,16 +32,26 @@ const STORAGE_KEY = 'ghst.inventory.settings';
 export interface Accent {
   id: string;
   label: string;
-  primary: string;
-  action: string;
+  /**
+   * `null` is the theme's own pair, and the override is removed rather than written.
+   *
+   * This used to carry `'#22d3ee'` / `'#00e5ff'` -- a second copy of what `theme/tokens.css`
+   * already says, in a file no colour gate could see. It was right on the day it was typed and
+   * would have gone on calling itself "Ghst" while being some other cyan the moment the token
+   * moved, which is exactly the drift `copies.py` exists to stop between resources, happening
+   * inside one. `Tools/checks/literals.py` found it by matching the value.
+   */
+  primary: string | null;
+  action: string | null;
 }
 
 export const ACCENTS: Accent[] = [
-  { id: 'ghst', label: 'Ghst', primary: '#22d3ee', action: '#00e5ff' },
+  { id: 'ghst', label: 'Ghst', primary: null, action: null },
   { id: 'lime', label: 'Lime', primary: '#a3e635', action: '#bef264' },
   { id: 'amber', label: 'Amber', primary: '#fbbf24', action: '#fcd34d' },
   { id: 'rose', label: 'Rose', primary: '#fb7185', action: '#fda4af' },
   { id: 'violet', label: 'Violet', primary: '#a78bfa', action: '#c4b5fd' },
+  /* @literal-ok a monochrome preset's live tier is white by definition, not the ink token */
   { id: 'plain', label: 'Plain', primary: '#d4d4d4', action: '#ffffff' },
 ];
 
@@ -143,14 +153,26 @@ export function applySettings(): void {
     const style = document.documentElement.style;
     const chosen = accent();
 
-    style.setProperty('--color-primary', chosen.primary);
-    style.setProperty('--color-action', chosen.action);
+    if (chosen.primary && chosen.action) {
+      style.setProperty('--color-primary', chosen.primary);
+      style.setProperty('--color-action', chosen.action);
 
-    // The glow tints are the accent at fixed alphas, and they are used as borders and
-    // rings all over the UI. Left alone they would stay cyan while everything else moved.
-    style.setProperty('--primary-glow', hexToRgba(chosen.primary, 0.08));
-    style.setProperty('--primary-glow-border', hexToRgba(chosen.primary, 0.25));
-    style.setProperty('--action-glow', hexToRgba(chosen.action, 0.35));
+      // The glow tints are the accent at fixed alphas, and they are used as borders and
+      // rings all over the UI. Left alone they would stay cyan while everything else moved.
+      style.setProperty('--primary-glow', hexToRgba(chosen.primary, 0.08));
+      style.setProperty('--primary-glow-border', hexToRgba(chosen.primary, 0.25));
+      style.setProperty('--action-glow', hexToRgba(chosen.action, 0.35));
+
+      // And the selected state layer, which is the accent at 14% and was missed when the state
+      // layers landed: every other surface followed the chosen accent while "this one is
+      // selected" stayed cyan. Found while removing the duplicated Ghst pair above.
+      style.setProperty('--state-selected', hexToRgba(chosen.primary, 0.14));
+    } else {
+      // The theme's own. REMOVED rather than re-set to the same hex, which is what this
+      // function's own comment above already said it wanted: removing a setting should remove
+      // its effect completely rather than leave a dead rule saying the same thing twice.
+      for (const name of ACCENT_PROPERTIES) style.removeProperty(name);
+    }
 
     // Only the scalar. app.css owns the formula, because a three-pane row multiplies the
     // same base again for its own reasons and a --slot-size written whole from here could
@@ -169,6 +191,16 @@ export function applySettings(): void {
     }
   });
 }
+
+/** Everything an accent overrides, so choosing the theme's own can put all of it back. */
+const ACCENT_PROPERTIES = [
+  '--color-primary',
+  '--color-action',
+  '--primary-glow',
+  '--primary-glow-border',
+  '--action-glow',
+  '--state-selected',
+];
 
 /** #rrggbb to rgba(). The accents above are all six-digit hex, so nothing else is handled. */
 function hexToRgba(hex: string, alpha: number): string {
